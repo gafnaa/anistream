@@ -10,7 +10,7 @@ AniStream is an anime streaming app backed by a samehadaku scraping API.
 |---|---|---|
 | `server/` | Express API: scraper, mirror resolver, HLS proxy | Live, shared by web and mobile |
 | `src/`, `index.html`, `vite.config.js` | Web prototype (React + Vite PWA) | Reference implementation |
-| `mobile/` | React Native app (Expo + TypeScript) | Being built, see `docs/PRD.md` |
+| `mobile/` | React Native app (Expo + TypeScript). Expo-specific rules: `mobile/AGENTS.md` | Being built, see `docs/PRD.md` |
 | `docs/PRD.md` | Product requirements and milestones | Source of truth for scope |
 
 Read `docs/PRD.md` before starting feature work. Read `README.md` for how playback and the HLS proxy work.
@@ -40,12 +40,13 @@ npm run dev        # API :5178 + Vite :5177
 npm run build && npm start   # single port :5178
 ./start.sh         # detached production run (used on waf-server)
 
-# Mobile (once scaffolded)
+# Mobile
 cd mobile
 npm install
 npx expo start     # dev server; open in a dev build / Expo Go
-npx tsc --noEmit   # type-check
-npx expo lint
+npx expo install <pkg>   # add deps (never plain npm install <pkg>)
+npm run typecheck
+npm run lint
 ```
 
 ## Conventions
@@ -62,7 +63,7 @@ npx expo lint
 
 - Server change: `curl` the affected `/api/*` endpoint and paste a trimmed response in the PR.
 - Web change: `npm run build` passes.
-- Mobile change: `npx tsc --noEmit` and `npx expo lint` pass. Run the screen you touched on Android (emulator or device) and describe what you checked in the PR.
+- Mobile change: `npm run typecheck` and `npm run lint` pass in `mobile/`. Run the screen you touched on Android (emulator or device) and describe what you checked in the PR.
 - Playback change: test at least one HLS episode and one iframe-only episode.
 
 ## Don'ts

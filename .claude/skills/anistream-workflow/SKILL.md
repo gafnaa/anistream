@@ -27,7 +27,7 @@ Merge only after the verification in section 3 passes. Never push to `main` dire
 
 ### Add a mobile screen
 1. Find the screen's requirements in PRD §5. Implement only the P0/P1 items in scope.
-2. Create the route under `mobile/app/` (Expo Router), e.g. `app/series/[slug].tsx`.
+2. Create the route under `mobile/src/app/` (Expo Router), e.g. `src/app/series/[slug].tsx`. Non-route code goes elsewhere in `mobile/src/`.
 3. Add or extend a query hook in `mobile/src/api/` and the response type in `mobile/src/api/types.ts`.
 4. Handle the loading, error-with-retry, and empty states.
 5. Check that the web prototype's matching page (`src/pages/*.jsx`) shows the same data. It is the reference.
@@ -48,7 +48,7 @@ Merge only after the verification in section 3 passes. Never push to `main` dire
 |---|---|
 | `server/` | curl the affected endpoint; paste the trimmed output in the PR |
 | `src/` (web) | `npm run build` |
-| `mobile/` | `cd mobile && npx tsc --noEmit && npx expo lint`, then run on Android |
+| `mobile/` | `cd mobile && npm run typecheck && npm run lint`, then run on Android |
 | docs only | Proofread; check that paths and commands exist |
 
 If a check fails, fix it or say so in the PR body. Never claim a check passed if it didn't run.
