@@ -1,6 +1,9 @@
 import { getLocales } from 'expo-localization';
 
 const en = {
+  titlesFound: 'titles found',
+  youMayLike: 'You might like',
+  browseAllGenres: 'Explore all genres',
   continueExploring: 'Keep exploring',
   readyToBinge: 'Finished, ready to binge',
   chooseYourMood: 'Choose your mood',
@@ -24,7 +27,7 @@ const en = {
   sortAZ: "A–Z",
   sortPopular: "Popular",
   clearQuery: "Clear search",
-  searchResults: "Search results",
+  searchResults: "Results for",
   noResults: "Nothing found yet",
   noResultsHint: "Try a shorter title or browse a genre below.",
   recentSearches: "Recent searches",
@@ -121,6 +124,9 @@ const en = {
 } as const;
 type Dictionary = { [K in keyof typeof en]: string };
 const id: Dictionary = {
+  titlesFound: 'judul ditemukan',
+  youMayLike: 'Mungkin kamu suka',
+  browseAllGenres: 'Jelajahi semua genre',
   continueExploring: 'Masih berlanjut',
   readyToBinge: 'Tamat, siap maraton',
   chooseYourMood: 'Pilih suasanamu',
@@ -144,7 +150,7 @@ const id: Dictionary = {
   sortAZ: "A–Z",
   sortPopular: "Populer",
   clearQuery: "Hapus pencarian",
-  searchResults: "Hasil pencarian",
+  searchResults: "Hasil untuk",
   noResults: "Belum ketemu",
   noResultsHint: "Coba judul yang lebih singkat atau jelajahi genre di bawah.",
   recentSearches: "Pencarian terakhir",

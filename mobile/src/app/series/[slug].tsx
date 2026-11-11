@@ -19,8 +19,8 @@ export default function Series() {
   if (query.isPending && slug) return skeleton ? <SeriesSkeleton /> : <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   const notFound = !slug || query.data || (query.error instanceof ApiError && query.error.status === 404);
   return <View style={{ flex: 1, backgroundColor: colors.bg, padding: 24, paddingTop: insets.top + 8, gap: 24 }}>
-    <SeriesBackButton />
     <AmbientBackground />
+    <SeriesBackButton />
     <RecoveryState kind={notFound ? 'missing' : 'offline'} title={t(notFound ? 'seriesNotFound' : 'offlineTitle')}
       description={t(notFound ? 'notFoundBody' : 'homeErrorBody')} label={t(notFound ? 'search' : 'retry')}
       action={() => notFound ? router.push('/search') : void query.refetch()} secondary={() => router.replace('/')} secondaryLabel={t('backHome')} />

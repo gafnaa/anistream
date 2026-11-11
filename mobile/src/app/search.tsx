@@ -1,10 +1,13 @@
 import { BrowseNavigation } from '@/components/BrowseNavigation';
 import { AmbientBackground } from '@/components/AmbientBackground';
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
+import { router } from 'expo-router';
+import { Row } from '@/components/Row';
+import { PosterCard } from '@/components/PosterCard';
 import { TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from '@/components/Icon';
-import { useGenres, useSearch } from '@/api';
+import { useBrowse, useGenres, useSearch } from '@/api';
 import { PosterGrid } from '@/components/PosterGrid';
 import { SeriesBackButton } from '@/components/SeriesDetail';
 import { GenreSuggestions } from '@/components/CatalogueControls';
@@ -26,6 +29,7 @@ export default function Search() {
   const recent = useRecentSearches();
   const genres = useGenres();
   const query = useSearch(debounced);
+  const recommendations = useBrowse({ order: 'popular' });
   const persist = (operation: Promise<void>) => { setStorageError(false); void operation.catch(() => setStorageError(true)); };
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(input.trim()), 300);
@@ -60,11 +64,15 @@ export default function Search() {
       retry={() => void query.refetch()} fetchingNext={query.isFetchingNextPage}
       next={() => { if (hasQuery && input.trim() === debounced && query.hasNextPage && !query.isFetching && !query.isError) void query.fetchNextPage(); }}
       header={hasQuery ? <View style={{ paddingTop: 16, paddingBottom: 24, gap: 8 }}>
-        <Text variant="h2" accessibilityRole="header">{t('searchResults')}</Text><Text muted variant="caption">{input.trim()}</Text>
+        <Text variant="h2" accessibilityRole="header">{t('searchResults')} “{input.trim()}”</Text><Text muted variant="caption">{query.data?.pages.flatMap(page => page.items).length ?? 0} {t('titlesFound')}</Text>
       </View> : undefined}
+      footer={hasQuery ? <View style={{ marginHorizontal: -24, paddingTop: 24 }}><Row title={t('youMayLike')}
+        items={recommendations.data?.pages.flatMap(page => page.items).slice(0, 6) ?? []} itemKey={item => item.slug}
+        renderItem={item => <PosterCard item={item} />} /></View> : undefined}
       empty={hasQuery ? <View style={{ paddingVertical: 100, gap: 24, alignItems: 'center' }}>
         <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' }}><SearchIcon size={36} color={colors['text-muted']} /></View><View style={{ gap: 8 }}><Text variant="h1" style={{ textAlign: 'center' }}>{t('noResults')}</Text><Text muted>{t('noResultsHint')}</Text></View>
         <GenreSuggestions genres={genres.data} />
+        <Button variant="outline" onPress={() => router.push('/discover')}><Text variant="caption">{t('browseAllGenres')}</Text></Button>
       </View> : <View style={{ paddingTop: 24, gap: 32 }}>
         <View style={{ gap: 8 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

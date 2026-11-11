@@ -74,9 +74,9 @@ function ToggleGroupItem({
           }),
           props.disabled && 'opacity-40',
           ToggleGroupPrimitive.utils.getIsSelected(value, props.value) && 'bg-primary/10 border border-ring',
-          'min-w-0 shrink-0 rounded-none shadow-none',
-          isFirst && 'rounded-l-md',
-          isLast && 'rounded-r-md',
+          'min-w-0 shrink-0 rounded-sm shadow-none',
+          isFirst && 'rounded-l-sm',
+          isLast && 'rounded-r-sm',
           (context.variant === 'outline' || variant === 'outline') && 'border-l-0',
           (context.variant === 'outline' || variant === 'outline') && isFirst && 'border-l',
           Platform.select({

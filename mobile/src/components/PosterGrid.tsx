@@ -10,9 +10,9 @@ import { useDelayedSkeleton } from '@/hooks/useDelayedSkeleton';
 import { t } from '@/i18n';
 
 export function PosterGrid({ items, header, loading = false, error = false, retry, next, fetchingNext = false,
-  tabScreen = false, empty }: {
+  tabScreen = false, empty, footer }: {
   items: CardItem[]; header?: ReactElement; loading?: boolean; error?: boolean; retry: () => void;
-  next?: () => void; fetchingNext?: boolean; tabScreen?: boolean; empty?: ReactElement;
+  next?: () => void; fetchingNext?: boolean; tabScreen?: boolean; empty?: ReactElement; footer?: ReactElement;
 }) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -36,6 +36,6 @@ export function PosterGrid({ items, header, loading = false, error = false, retr
     renderItem={({ item }) => <View style={{ paddingBottom: 20 }}><PosterCard item={item} width={posterWidth} /></View>}
     ListEmptyComponent={loading ? <View style={{ minHeight: 600 }}>{showSkeleton && skeletons}</View>
       : error ? failure : empty ?? <Text muted style={{ paddingVertical: 24 }}>{t('emptyRow')}</Text>}
-    ListFooterComponent={unique.length > 0 ? error ? failure : fetchingNext ? skeletons : undefined : undefined}
+    ListFooterComponent={unique.length > 0 ? error ? failure : fetchingNext ? skeletons : footer : undefined}
     onEndReached={next} onEndReachedThreshold={0.5} />;
 }
