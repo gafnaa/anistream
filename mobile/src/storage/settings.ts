@@ -1,0 +1,30 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSyncExternalStore } from 'react';
+
+export type Settings = { language: 'id' | 'en' | 'system'; autoplayNext: boolean; resume: boolean; onboarded: boolean };
+const defaults: Settings = { language: 'system', autoplayNext: true, resume: true, onboarded: false };
+let settings = defaults;
+let hydrated = false;
+const listeners = new Set<() => void>();
+const emit = () => listeners.forEach(listener => listener());
+const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
+export const settingsReady = AsyncStorage.getItem('anistream.settings.v1').then(raw => {
+  const value = raw ? JSON.parse(raw) : {};
+  settings = { language: ['id', 'en', 'system'].includes(value?.language) ? value.language : 'system',
+    autoplayNext: typeof value?.autoplayNext === 'boolean' ? value.autoplayNext : true,
+    resume: typeof value?.resume === 'boolean' ? value.resume : true, onboarded: value?.onboarded === true };
+}).catch(() => undefined).finally(() => { hydrated = true; emit(); });
+let pending = Promise.resolve();
+export function updateSettings(change: Partial<Settings>) {
+  const operation = pending.then(async () => {
+    await settingsReady;
+    const next = { ...settings, ...change };
+    await AsyncStorage.setItem('anistream.settings.v1', JSON.stringify(next));
+    settings = next; emit();
+  });
+  pending = operation.catch(() => undefined);
+  return operation;
+}
+export const getSettings = () => settings;
+export const useSettings = () => useSyncExternalStore(subscribe, getSettings, () => defaults);
+export const useSettingsHydrated = () => useSyncExternalStore(subscribe, () => hydrated, () => false);

@@ -6,7 +6,7 @@ import { BrowseNavigation } from '@/components/BrowseNavigation';
 import { t } from '@/i18n';
 export default function NotFound() {
   return <View style={{ flex: 1 }}><AmbientBackground />
-    <RecoveryState kind="missing" title={t('seriesNotFound')} description={t('notFoundBody')}
+    <RecoveryState kind="missing" title={t('notFound')} description={t('notFoundBody')}
       label={t('search')} action={() => router.replace('/search')} secondaryLabel={t('backHome')} secondary={() => router.replace('/')} />
     <BrowseNavigation />
   </View>;
