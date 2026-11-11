@@ -42,6 +42,11 @@ Merge only after the verification in section 3 passes. Never push to `main` dire
 - `hls`/`mp4` play through `/api/hls` in `expo-video`. `iframe` plays in `react-native-webview`.
 - Test one HLS episode and one iframe-only episode before opening the PR.
 
+### Cut a release (Android APK)
+1. PR: bump `expo.version` in `mobile/app.json`, then squash-merge it once CI is green.
+2. `git switch main && git pull --ff-only && git tag v<version> && git push origin v<version>`
+3. Follow the run with `gh run list --workflow release.yml`. On success, the APK is attached to the GitHub Release for that tag.
+
 ## 3. Verify before the PR
 
 | Change | Must pass |

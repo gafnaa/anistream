@@ -49,6 +49,17 @@ npm run typecheck
 npm run lint
 ```
 
+## CI/CD and releases
+
+- **CI** (`.github/workflows/ci.yml`) runs on every PR and every push to `main`. It builds the web app and checks the API files, then runs typecheck, lint and expo-doctor on the mobile app and bundles its Android JS. Don't merge a PR while CI is red.
+- **Release** (`.github/workflows/release.yml`) runs when a `v*` tag is pushed. It builds a signed Android APK on EAS (profile `production`, Expo project `@sankya/anistream`) and publishes it as a GitHub Release.
+  1. In a PR, bump `expo.version` in `mobile/app.json` (e.g. `0.2.0`), then squash-merge it.
+  2. `git switch main && git pull --ff-only && git tag v0.2.0 && git push origin v0.2.0`
+  3. The tag must equal `v` + `expo.version`, or the workflow fails. EAS increments the Android `versionCode` itself.
+- EAS auth comes from the `EXPO_TOKEN` repo secret. Signing keys are stored on EAS (`npx eas-cli credentials`). Never commit them.
+- Every EAS build uses up the account's monthly build quota. Builds run only for release tags, not on every merge.
+- Ad-hoc test build: `cd mobile && npx eas-cli build -p android --profile preview`
+
 ## Conventions
 
 - **Scraping lives only in `server/scraper.js`.** The mobile app never fetches samehadaku directly. It only calls `/api/*`.
