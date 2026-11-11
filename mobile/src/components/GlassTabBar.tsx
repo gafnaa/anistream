@@ -32,10 +32,10 @@ export function GlassTabBar({ state, descriptors, emitter, navigateToTab }: Bott
     <View style={styles.shadow}>
       <View onLayout={e => setWidth(e.nativeEvent.layout.width)} style={styles.bar}>
         {liquid ? <GlassView colorScheme="dark" tintColor={colors.surface} style={StyleSheet.absoluteFill} />
-          : <BlurView tint="dark" intensity={65} blurTarget={target}
+          : <BlurView tint="dark" intensity={24} blurTarget={target}
             blurMethod="dimezisBlurViewSdk31Plus" style={StyleSheet.absoluteFill} />}
         <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.glass }]} />
-        {width > 0 && <Animated.View pointerEvents="none" style={[styles.indicator, { width: cell - 8 }, indicator]} />}
+        {width > 0 && <Animated.View pointerEvents="none" style={[styles.indicator, { width: 44, left: 12 + (cell - 52) / 2 }, indicator]} />}
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const focused = state.index === index;
@@ -52,7 +52,8 @@ export function GlassTabBar({ state, descriptors, emitter, navigateToTab }: Bott
               Platform.OS === 'web' && focusedTab === route.key && {
                 outlineStyle: 'solid', outlineWidth: 2, outlineColor: colors.brand,
               }]}>
-            {options.tabBarIcon?.({ focused, color: focused ? colors.brand : colors['text-muted'], size: 24 })}
+            {focused && <View style={{ position: 'absolute', bottom: 0, width: 5, height: 3, borderRadius: 2, backgroundColor: colors.brand }} />}
+            {options.tabBarIcon?.({ focused, color: focused ? colors.text : colors['text-muted'], size: 24 })}
           </Pressable>;
         })}
       </View>
@@ -61,10 +62,10 @@ export function GlassTabBar({ state, descriptors, emitter, navigateToTab }: Bott
 }
 const styles = StyleSheet.create({
   position: { position: 'absolute', left: 16, right: 16 },
-  shadow: { borderRadius: 32, boxShadow: '0 8px 24px rgba(0,0,0,0.32)' },
-  bar: { height: TAB_BAR_HEIGHT, borderRadius: 32, overflow: 'hidden', borderWidth: 1,
+  shadow: { borderRadius: 30, boxShadow: '0 8px 24px rgba(0,0,0,0.32)' },
+  bar: { height: TAB_BAR_HEIGHT, borderRadius: 30, overflow: 'hidden', borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)', flexDirection: 'row', gap: 8, paddingHorizontal: 8, alignItems: 'center' },
   tab: { flex: 1, minWidth: 48, minHeight: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  indicator: { position: 'absolute', left: 12, top: 7, height: 44, borderRadius: 22,
+  indicator: { position: 'absolute', left: 12, top: 5, height: 44, borderRadius: 22,
     backgroundColor: '#F43F5E26', boxShadow: '0 0 14px rgba(244,63,94,0.18)' },
 });
