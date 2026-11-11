@@ -3,10 +3,10 @@ import { brandRamp } from './palette';
 export { brandRamp, tones, gradients, genreGradients } from './palette';
 
 export const colors = {
-  ...brandRamp, elevated: '#222838', overlay: '#2B3345', glass: 'rgba(18,21,29,0.90)',
-  bg: '#0B0D12', surface: '#12151D', card: '#171B25', 'card-2': '#1E2431',
-  line: '#262C3A', text: '#EEF1F7', 'text-muted': '#8B93A7', brand: '#7C5CFF',
-  'brand-strong': '#6C4CF0', 'brand-2': '#4D7CFF', accent: '#FF4D6D',
+  ...brandRamp, elevated: '#242630', overlay: '#2C2F3A', glass: 'rgba(19,21,28,0.92)',
+  bg: '#0B0D12', surface: '#13151C', card: '#1A1C24', 'card-2': '#23262F',
+  line: '#2E323D', text: '#EEF1F7', 'text-muted': '#9299AD', brand: '#F43F5E',
+  'brand-strong': '#E11D48', 'brand-2': '#FB923C', accent: '#FDA4AF',
 } as const;
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 export const radius = { chip: 6, card: 10, sheet: 14 } as const;

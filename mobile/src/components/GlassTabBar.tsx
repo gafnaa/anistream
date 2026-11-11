@@ -61,5 +61,5 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.10)', flexDirection: 'row', gap: 8, paddingHorizontal: 8, alignItems: 'center' },
   tab: { flex: 1, minWidth: 48, minHeight: 52, alignItems: 'center', justifyContent: 'center', gap: 3 },
   indicator: { position: 'absolute', left: 12, top: 5, height: 34, borderRadius: 17,
-    backgroundColor: '#7C5CFF26', boxShadow: '0 0 14px rgba(124,92,255,0.18)' },
+    backgroundColor: '#F43F5E26', boxShadow: '0 0 14px rgba(244,63,94,0.18)' },
 });
