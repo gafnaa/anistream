@@ -21,7 +21,8 @@ function Catalogue() {
       <Button variant="ghost" style={{ position: 'absolute', top: 16, right: 16 }} accessibilityLabel={t('search')} onPress={() => router.push('/search')}><Search size={24} color={colors.text} /></Button>
       {[{ title: t('continueExploring'), query: latest }, { title: t('readyToBinge'), query: completed }, { title: t('chooseYourMood'), query: popular }].map(({title,query}) => <View key={title} style={{ marginHorizontal: -24 }}>
         <Row title={title} items={query.data?.pages.flatMap(page => page.items) ?? []} itemKey={item => item.slug}
-          loading={query.isPending} error={query.isError} retry={() => void query.refetch()} renderItem={item => <PosterCard item={item} />} />
+          loading={query.isPending} error={query.isError} retry={() => void query.refetch()}
+          onEndReached={() => { if (query.hasNextPage && !query.isFetching && !query.isError) void query.fetchNextPage(); }} renderItem={item => <PosterCard item={item} />} />
       </View>)}
     </Screen>
     <BrowseNavigation />
