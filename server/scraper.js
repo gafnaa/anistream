@@ -136,7 +136,43 @@ export async function getLatest(page = 1) {
   const $ = cheerio.load(html);
   const items = parseCards($, $('.listupd').first());
   const hasNext = $('.hpage a.r').length > 0;
+  await addReleaseTimes(items, page).catch(() => {});
   return { items, page, hasNext };
+}
+
+/*
+ * The listing has no dates, but the RSS feed (10 posts per page) has
+ * <pubDate>. Scan feed pages until every item has a time, up to a cap that
+ * grows with the listing page. Items that aren't found get no releasedAt.
+ */
+const feedPages = new Map();
+const FEED_TTL = 600_000;
+
+async function feedPage(n) {
+  const hit = feedPages.get(n);
+  if (hit && Date.now() - hit.at < FEED_TTL) return hit.posts;
+  const xml = await fetchPage(`${BASE}/feed/${n > 1 ? `?paged=${n}` : ''}`);
+  const posts = [...xml.matchAll(/<item>[\s\S]*?<link>([^<]+)<\/link>[\s\S]*?<pubDate>([^<]+)<\/pubDate>/g)]
+    .map(([, link, date]) => ({ slug: slugFromUrl(link.trim()), at: new Date(date.trim()).toISOString() }));
+  feedPages.set(n, { at: Date.now(), posts });
+  return posts;
+}
+
+async function addReleaseTimes(items, page) {
+  const pending = new Set(items.filter(item => item.kind === 'episode'));
+  const limit = Math.min(4 * page + 2, 30);
+  for (let n = 1; n <= limit && pending.size; n += 3) {
+    const batches = await Promise.all([n, n + 1, n + 2].filter(k => k <= limit).map(k => feedPage(k).catch(() => [])));
+    for (const post of batches.flat()) {
+      for (const item of pending) {
+        // Listing slugs can be truncated; the feed has the full slug.
+        if (post.slug && (post.slug === item.slug || post.slug.startsWith(item.slug))) {
+          item.releasedAt = post.at;
+          pending.delete(item);
+        }
+      }
+    }
+  }
 }
 
 const ORDER_MAP = {
