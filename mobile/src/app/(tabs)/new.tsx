@@ -1,6 +1,8 @@
+import { useState } from 'react';
+import { Schedule } from '@/components/Schedule';
 import { RecoveryState } from '@/components/RecoveryState';
 import { useOffline, OfflineState } from '@/components/Connectivity';
-import { SectionList, RefreshControl, View } from 'react-native';
+import { SectionList, RefreshControl, View, Pressable } from 'react-native';
 import { useLatest } from '@/api';
 import { useBookmarks } from '@/storage';
 import { ActivityLayout, dayLabel, relativeTime } from '@/components/ActivityLayout';
@@ -33,6 +35,7 @@ function releaseMeta(releasedAt?: string) {
 }
 
 export default function New() {
+  const [segment, setSegment] = useState<'latest' | 'schedule'>('latest');
   const offline = useOffline();
   const query = useLatest();
   const bookmarks = useBookmarks();
@@ -40,12 +43,16 @@ export default function New() {
   const items = [...new Map((query.data?.pages.flatMap(page => page.items) ?? []).map(item => [item.slug, item])).values()];
   const skeleton = <SkeletonMotionControl>{[0, 1, 2, 3, 4].map(i => <ListItemSkeleton key={i} />)}</SkeletonMotionControl>;
   const failure = <View style={{ gap: 12, paddingVertical: 24 }}><Text accessibilityRole="alert" muted>{t('catalogueError')}</Text><Button onPress={() => void query.refetch()}><Text>{t('retry')}</Text></Button></View>;
+  const header = <View style={{ paddingTop: 24, gap: 24, paddingBottom: 32 }}><Text variant="h1" accessibilityRole="header">{t('new')}</Text>
+    <View style={{ flexDirection: 'row', gap: 10 }}>{(['latest', 'schedule'] as const).map(value => <Pressable key={value} accessibilityRole="tab" accessibilityState={{ selected: segment === value }} onPress={() => setSegment(value)}
+      style={({ pressed }) => ({ flex: 1, minHeight: 44, justifyContent: 'center', padding: 8, borderWidth: 1, borderColor: segment === value ? colors.brand : colors.card, borderRadius: 6, backgroundColor: segment === value ? '#F43F5E1F' : colors.card, opacity: pressed ? 0.7 : 1 })}>
+      <Text variant="caption" style={{ color: segment === value ? colors.accent : colors.text }}>{t(value === 'latest' ? 'latestSegment' : 'scheduleSegment')}</Text>
+    </Pressable>)}</View>
+  </View>;
+  if (segment === 'schedule') return <ActivityLayout><Schedule header={header} /></ActivityLayout>;
   return <ActivityLayout><SectionList sections={byDay(items)} keyExtractor={item => item.slug}
     contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: bottom }} stickySectionHeadersEnabled={false}
-    ListHeaderComponent={<View style={{ paddingTop: 24, gap: 24, paddingBottom: 32 }}><Text variant="h1" accessibilityRole="header">{t('new')}</Text>
-      {/* TODO(M8): add the schedule segment here when /api/schedule is available. */}
-      <View style={{ flexDirection: 'row', gap: 10 }}><View accessibilityRole="tab" accessibilityState={{ selected: true }} style={{ width: '49%', padding: 8, borderWidth: 1, borderColor: colors.brand, borderRadius: 6, backgroundColor: '#F43F5E1F' }}><Text variant="caption" style={{ color: colors.accent }}>{t('latestSegment')}</Text></View></View>
-    </View>}
+    ListHeaderComponent={header}
     renderSectionHeader={({ section }) => <Text variant="h2" style={{ marginBottom: 6 }}>{section.title}</Text>}
     renderItem={({ item }) => <ActivityEpisodeRow slug={item.slug} title={item.title} episode={String(item.episode ?? '')} image={item.image}
       meta={`${releaseMeta(item.releasedAt)}${bookmarks.some(saved => saved.title.trim().toLowerCase() === item.title.trim().toLowerCase()) ? ` · ${t('savedMarker')}` : ''}`} />}
