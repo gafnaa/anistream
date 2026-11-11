@@ -205,12 +205,12 @@ export function HeroBanner({ items }: { items: TrendingCard[] }) {
           {titles.map((title, i) => <Dot key={title.slug} index={i} offset={offset} width={width} reducedMotion={reducedMotion} active={i === current} />)}
         </View>
         {titles.length > 1 && <>
-          <Button size="icon" variant="ghost" accessibilityLabel={t('previousTitle')} style={{ position: 'absolute', left: 0, bottom: -18 }} onPress={() => { move(current - 1); release(); }}><Icon name="chevron-back" size={16} color={colors['text-muted']} /></Button>
-          <Button size="icon" variant="ghost" accessibilityLabel={t('nextTitle')} style={{ position: 'absolute', right: 0, bottom: -18 }} onPress={() => { move(current + 1); release(); }}><Icon name="chevron-forward" size={16} color={colors['text-muted']} /></Button>
+          <Button size="icon" variant="ghost" accessibilityLabel={t('previousTitle')} style={{ position: 'absolute', left: 0, bottom: -18 }} onPress={() => { move(current - 1); release(); }}><Icon name="chevron-back" size={24} color={colors['text-muted']} /></Button>
+          <Button size="icon" variant="ghost" accessibilityLabel={t('nextTitle')} style={{ position: 'absolute', right: 0, bottom: -18 }} onPress={() => { move(current + 1); release(); }}><Icon name="chevron-forward" size={24} color={colors['text-muted']} /></Button>
         </>}
         {titles.length > 1 && !reducedMotion && <Button size="icon" variant="ghost" accessibilityLabel={t(paused ? 'resumeHero' : 'pauseHero')}
           style={{ position: 'absolute', right: 48, bottom: -18 }} accessibilityState={{ selected: paused }} onPress={() => setPaused(value => !value)}>
-          <Icon name={paused ? 'play' : 'pause'} color={colors.text} size={18} />
+          <Icon name={paused ? 'play' : 'pause'} color={colors.text} size={24} />
         </Button>}
 
       </View>

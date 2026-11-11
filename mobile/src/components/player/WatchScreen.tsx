@@ -11,6 +11,7 @@ import { Text } from '@/components/Text';
 import { EpisodeRow } from '@/components/EpisodeRow';
 import { Button } from '@/components/ui/button';
 import { Image } from 'expo-image';
+import { Server, Check } from 'lucide-react-native';
 import { SkeletonBox, SkeletonText } from '@/components/skeleton';
 import { goBack } from '@/components/SeriesDetail';
 import { colors } from '@/theme';
@@ -174,7 +175,7 @@ export function WatchScreen({ slug, previewNext = false }: { slug: string; previ
             {sources.map((item, i) => <Button key={`${item.label}-${i}`} variant="ghost" accessibilityState={{ selected: i === index }}
               style={{ height: 60, justifyContent: 'flex-start', borderRadius: 6, borderWidth: 1, borderColor: i === index ? colors.brand : 'transparent', backgroundColor: i === index ? '#F43F5E1F' : 'transparent' }}
               onPress={() => { setPicker(false); setFailed(false); setIndex(i); setAttempt(value => value + 1); setToast(`${t('switchedServer')} ${item.label}`); }}>
-              <Text style={{ flex: 1 }}>{item.label}</Text>{i === index && <Text>✓</Text>}
+              <Server size={24} color={colors['text-muted']} /><View style={{ flex: 1, gap: 4 }}><Text variant="title">{item.label}</Text><Text variant="caption" muted>{item.host}</Text></View>{i === index && <Check size={24} color={colors.text} />}
             </Button>)}
           </ScrollView>
         </View>

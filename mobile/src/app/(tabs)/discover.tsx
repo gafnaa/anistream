@@ -22,7 +22,7 @@ export default function Discover() {
   return <Screen title={t('discover')} titleVariant="h1" preview={false}>
     <Button variant="secondary" accessibilityLabel={t('searchHint')} onPress={() => router.push('/search')}
       style={{ justifyContent: 'flex-start', gap: 12, height: 48, borderRadius: 6, borderWidth: 1, borderColor: colors.line }}>
-      <Icon name="search-outline" size={22} color={colors['text-muted']} />
+      <Icon name="search-outline" size={24} color={colors['text-muted']} />
       <Text muted>{t('searchHint')}</Text>
     </Button>
     <QuickFilters />

@@ -46,7 +46,7 @@ export default function Search() {
       <SeriesBackButton />
       <View style={{ flex: 1, minHeight: 48, borderRadius: 6, borderWidth: focused ? 2 : 1, borderColor: focused ? colors.brand : colors.line,
         backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', paddingLeft: 12 }}>
-        <Icon name="search-outline" size={20} color={colors['text-muted']} />
+        <Icon name="search-outline" size={24} color={colors['text-muted']} />
         <TextInput ref={field} value={input} onChangeText={setInput} autoFocus autoCorrect={false} autoCapitalize="none"
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} className="web:outline-none"
           accessibilityLabel={t('searchHint')} placeholder={t('searchHint')} placeholderTextColor={colors['text-muted']}
@@ -54,7 +54,7 @@ export default function Search() {
           style={{ flex: 1, minWidth: 0, minHeight: 48, paddingHorizontal: 12, color: colors.text, fontFamily: fonts.inter400, fontSize: 15 }} />
         <Button variant="ghost" size="icon" accessibilityLabel={t('clearQuery')} disabled={!input}
           onPress={() => { setInput(''); field.current?.focus(); }}>
-          <Icon name="close" size={20} color={colors.text} />
+          <Icon name="close" size={24} color={colors.text} />
         </Button>
       </View>
     </View>
@@ -82,10 +82,10 @@ export default function Search() {
           {recent.length === 0 ? <Text muted>{t('noSearches')}</Text> : recent.map(value => <View key={value}
             style={{ flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: colors.line }}>
             <Button variant="ghost" style={{ flex: 1, justifyContent: 'flex-start', paddingHorizontal: 0, gap: 12 }} onPress={() => setInput(value)}>
-              <Icon name="time-outline" size={18} color={colors['text-muted']} /><Text numberOfLines={1} style={{ flex: 1 }}>{value}</Text>
+              <Icon name="time-outline" size={24} color={colors['text-muted']} /><Text numberOfLines={1} style={{ flex: 1 }}>{value}</Text>
             </Button>
             <Button variant="ghost" size="icon" accessibilityLabel={`${t('removeSearch')} ${value}`} onPress={() => setRemoval(value)}>
-              <Icon name="close" size={18} color={colors['text-muted']} />
+              <Icon name="close" size={24} color={colors['text-muted']} />
             </Button>
           </View>)}
         </View>
