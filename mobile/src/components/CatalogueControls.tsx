@@ -15,7 +15,7 @@ export const quickFilters: { label: TranslationKey; params: { status?: string; t
 ];
 export function QuickFilters() {
   return <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-    {quickFilters.slice(0, 3).map(filter => <Button key={filter.label} variant="outline" size="sm"
+    {quickFilters.map(filter => <Button key={filter.label} variant="secondary" size="sm" style={{ minWidth: 90, borderRadius: 6 }}
       onPress={() => router.push({ pathname: '/browse', params: filter.params })}>
       <Text variant="caption">{t(filter.label)}</Text>
     </Button>)}
