@@ -19,7 +19,7 @@ export type SeriesResponse = {
   released: string | null; season: string | null; type: string | null; rating: string | null;
   episodes: SeriesEpisode[];
 };
-export type EpisodeSource = { label: string; url: string; host: string; kind: 'iframe' | 'resolvable' };
+export type EpisodeSource = { label: string; url: string; host: string; kind: 'iframe' | 'resolvable'; provider?: 'otakudesu'; quality?: string | null; type?: 'mp4' | 'hls' | 'iframe' };
 export type EpisodeResponse = {
   slug: string; title: string; seriesSlug: string | null; seriesTitle: string | null;
   prevSlug: string | null; nextSlug: string | null; sources: EpisodeSource[];

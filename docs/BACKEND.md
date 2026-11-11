@@ -86,7 +86,7 @@ If a stream fails, the player automatically hops to the next mirror.
 | `GET /api/genres` | `[{ slug, name, count? }]` from the catalogue filter; cached 24 hours |
 | `GET /api/search?q=&page=` | Search results |
 | `GET /api/series/:slug` | Metadata, synopsis, `genres: string[]`, `genreLinks: [{ slug, name }]`, episodes |
-| `GET /api/episode/:slug` | Episode info + mirror list |
+| `GET /api/episode/:slug` | Episode info + mirror list; optional `provider`, `quality`, `type` on sources |
 | `GET /api/resolve?mirror=` | `{ type: hls\|mp4\|iframe, url, playUrl }` |
 | `GET /api/hls?url=` | Proxied manifest / segment |
 
@@ -94,6 +94,32 @@ Responses are cached in memory (60–300s; genres for 24 hours) so navigating ba
 re-scrape the upstream site every time.
 
 ---
+
+## Otakudesu fallback
+
+The catalogue and episode metadata still come from samehadaku. Episode requests
+also search otakudesu.blog in parallel, with a six-second deadline. Normalized
+titles must match all words and the season, and the episode number must match
+exactly. Confirmed anime matches and search misses are cached for 24 hours;
+timeouts and upstream errors are retried on later requests.
+
+Sources retain `{ label, url, host, kind }`. Otakudesu adds
+`provider: "otakudesu"`, `quality: "720p"` (or null when unknown), and
+`type: "mp4" | "hls" | "iframe"`. Labels such as `OD 720p` appear in the
+mobile server sheet. Direct Otakudesu streams come first, descending by quality,
+then Blogger mirrors, with xtwap last. Mobile stably moves iframe sources after
+native streams while preserving the API order within each group.
+
+Only verified public desustream players are inspected; unknown hosts and
+captcha/attestation/challenge pages are skipped. The site's public WordPress
+AJAX resolves odcdn/odstream mirrors, reading action hashes from inline scripts
+with fallback constants. Other mirror hosts are currently omitted rather than
+assuming they embed successfully. If the lookup fails, samehadaku sources remain.
+
+`/api/resolve` accepts desustream.net and odcloud.net. Direct odcloud MP4s
+return their original URL as `playUrl`: they support byte ranges without a
+Referer and do not need the HLS proxy. HLS on odcloud uses the existing proxy.
+The six-second budget includes search, episode discovery, and mirror resolution.
 
 ## Notes and limits
 
