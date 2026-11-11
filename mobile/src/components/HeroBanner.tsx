@@ -1,38 +1,142 @@
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { RemovalDialog } from './RemovalDialog';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
+import { AppState, Platform, ScrollView, StyleSheet, useWindowDimensions, View, type PointerEvent } from 'react-native';
 import { Image } from 'expo-image';
-import { ArtworkBackdrop } from './ArtworkBackdrop';
-import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { router, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { useReducedMotion } from 'react-native-reanimated';
+import Animated, { Extrapolation, interpolate, interpolateColor, runOnJS, useAnimatedScrollHandler, useAnimatedStyle, useReducedMotion, useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { useSeries } from '@/api';
 import type { TrendingCard } from '@/api/types';
 import { useIsBookmarked, toggleBookmark } from '@/storage';
 import { Text } from './Text';
 import { Chip } from './Chip';
-import { ActionButton } from './ActionButton';
+import { Button } from './ui/button';
+import { Text as ButtonText } from './ui/text';
+import { RemovalDialog } from './RemovalDialog';
 import { colors } from '@/theme';
 import { t } from '@/i18n';
 
-export const HERO_HEIGHT = 500;
+export function useHeroHeight() {
+  return Math.round(useWindowDimensions().height * 0.67);
+}
+
+function heroImage(source: string | null) {
+  if (!source) return null;
+  const url = new URL(source);
+  // Unsupported larger WordPress sizes fall back to a tiny image.
+  if (/^i\d\.wp\.com$/.test(url.hostname)) url.searchParams.set('resize', '1333,2000');
+  return url.toString();
+}
+
+function Slide({ item, index, count, width, height, offset, reducedMotion }: {
+  item: TrendingCard; index: number; count: number; width: number; height: number;
+  offset: SharedValue<number>; reducedMotion: boolean;
+}) {
+  const imageStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: reducedMotion ? 1 : interpolate(offset.value / width,
+      [index - 1, index, index + 1], [1.06, 1.015, 1.06], Extrapolation.CLAMP) }],
+  }));
+  return <View style={{ width, height, overflow: 'hidden' }}>
+    <Animated.View style={[StyleSheet.absoluteFill, imageStyle]}>
+      <Image source={heroImage(item.image)} contentFit="cover" contentPosition={{ top: '10%', left: '50%' }}
+        priority={index === 0 ? 'high' : 'normal'} transition={0}
+        accessibilityLabel={`${index + 1} / ${count}: ${item.title}`}
+        style={StyleSheet.absoluteFill} />
+    </Animated.View>
+  </View>;
+}
+
+function Dot({ index, offset, width, reducedMotion, active }: {
+  index: number; offset: SharedValue<number>; width: number; reducedMotion: boolean; active: boolean;
+}) {
+  const style = useAnimatedStyle(() => {
+    const progress = Math.max(0, 1 - Math.abs(offset.value / width - index));
+    return {
+      width: reducedMotion ? (active ? 24 : 6) : 6 + progress * 18,
+      backgroundColor: reducedMotion ? (active ? colors.brand : colors['text-muted'])
+        : interpolateColor(progress, [0, 1], [colors['text-muted'], colors.brand]),
+    };
+  });
+  return <Animated.View style={[{ height: 6, borderRadius: 3 }, style]} />;
+}
+
 export function HeroBanner({ items }: { items: TrendingCard[] }) {
   const titles = items.slice(0, 5);
+  const { width } = useWindowDimensions();
+  const height = useHeroHeight();
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
+  const offset = useSharedValue(0);
   const [index, setIndex] = useState(0);
   const [touched, setTouched] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [delay, setDelay] = useState(5000);
+  const [interaction, setInteraction] = useState(0);
+  const [active, setActive] = useState(AppState.currentState === 'active');
   const [confirmRemoval, setConfirmRemoval] = useState(false);
   const [storageError, setStorageError] = useState(false);
   const reducedMotion = useReducedMotion();
-  const item = titles[index % Math.max(1, titles.length)];
+  const [focused, setFocused] = useState(false);
+  useFocusEffect(useCallback(() => {
+    setFocused(true);
+    return () => setFocused(false);
+  }, []));
+  const current = index % Math.max(1, titles.length);
+  const item = titles[current];
   const series = useSeries(item?.slug ?? '');
   const saved = useIsBookmarked(item?.slug ?? '');
+  const mouse = useRef<{ start: number; offset: number } | null>(null);
+  const mouseOffset = useRef(0);
+  const onScroll = useAnimatedScrollHandler<{ page?: number }>((event, context) => {
+    offset.value = event.contentOffset.x;
+    const settledPage = Math.round(event.contentOffset.x / width);
+    // Web wheel/touch scrolling does not always emit a momentum-end event.
+    if (Math.abs(event.contentOffset.x - settledPage * width) < 1 && context.page !== settledPage) {
+      context.page = settledPage;
+      runOnJS(setIndex)(settledPage);
+    }
+  });
+  const move = useCallback((next: number, animated = true) => {
+    const target = (next + titles.length) % Math.max(1, titles.length);
+    scroll.current?.scrollTo({ x: target * width, animated: animated && !reducedMotion });
+    setIndex(target);
+  }, [titles.length, width, reducedMotion]);
+  const release = useCallback(() => {
+    setTouched(false);
+    setDelay(3000);
+    setInteraction(value => value + 1);
+  }, []);
   useEffect(() => {
-    if (touched || paused || reducedMotion || titles.length < 2) return;
-    const timer = setInterval(() => setIndex(current => (current + 1) % titles.length), 8000);
-    return () => clearInterval(timer);
-  }, [touched, paused, reducedMotion, titles.length]);
-  if (!item) return <View style={{ height: HERO_HEIGHT, justifyContent: 'center', padding: 24 }}><Text>{t('emptyRow')}</Text></View>;
+    const subscription = AppState.addEventListener('change', state => setActive(state === 'active'));
+    return () => subscription.remove();
+  }, []);
+  useEffect(() => {
+    if (touched || dragging || paused || reducedMotion || !focused || !active || confirmRemoval || titles.length < 2) return;
+    const timer = setTimeout(() => {
+      move(current + 1);
+      setDelay(5000);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [touched, dragging, paused, reducedMotion, focused, active, confirmRemoval, titles.length, current, delay, interaction, move]);
+  const page = useRef(current);
+  useEffect(() => {
+    page.current = current;
+  }, [current]);
+  useEffect(() => {
+    scroll.current?.scrollTo({ x: page.current * width, animated: false });
+  }, [width, titles.length]);
+
+  const endMouseDrag = (event: PointerEvent) => {
+    if (!mouse.current) return;
+    mouse.current = null;
+    const target = Math.max(0, Math.min(titles.length - 1, Math.round(mouseOffset.current / width)));
+    move(target);
+    release();
+    const element = event.currentTarget as unknown as HTMLElement;
+    if (element.hasPointerCapture?.(event.nativeEvent.pointerId)) element.releasePointerCapture(event.nativeEvent.pointerId);
+  };
+  if (!item) return <View style={{ height, justifyContent: 'center', padding: 24 }}><Text>{t('emptyRow')}</Text></View>;
   const episode = series.data?.episodes.reduce<(typeof series.data.episodes)[number] | undefined>((latest, candidate) => {
     if (!latest) return candidate;
     return Number(candidate.number ?? -1) > Number(latest.number ?? -1) ? candidate : latest;
@@ -43,43 +147,92 @@ export function HeroBanner({ items }: { items: TrendingCard[] }) {
     void toggleBookmark({ slug: item.slug, title: item.title, poster: item.image ?? '' })
       .then(() => setConfirmRemoval(false)).catch(() => setStorageError(true));
   };
-  return <View style={styles.hero} onTouchStart={() => setTouched(true)} onTouchEnd={() => setTouched(false)} onTouchCancel={() => setTouched(false)}>
-    <ArtworkBackdrop source={item.image}>
-      <Image source={item.image} contentFit="contain" transition={reducedMotion ? 0 : 250}
-        style={{ position: 'absolute', top: 45, right: 20, height: 300, width: 200 }} />
-    </ArtworkBackdrop>
-    <View style={styles.content}>
+  return <View style={{ height, backgroundColor: colors.surface, overflow: 'hidden' }}
+    onPointerDown={() => setTouched(true)} onPointerUp={release} onPointerCancel={release}
+    onTouchStart={() => setTouched(true)} onTouchEnd={release} onTouchCancel={release}>
+    <Animated.ScrollView ref={scroll} horizontal pagingEnabled={Platform.OS !== 'web' || !touched} showsHorizontalScrollIndicator={false}
+      testID="hero-carousel" scrollEventThrottle={16} onScroll={onScroll}
+      accessibilityLabel={t('featuredCarousel')} accessibilityRole="adjustable"
+      accessibilityValue={{ min: 1, max: titles.length, now: current + 1, text: item.title }}
+      accessibilityActions={[{ name: 'increment', label: t('nextTitle') }, { name: 'decrement', label: t('previousTitle') }]}
+      onAccessibilityAction={event => {
+        move(current + (event.nativeEvent.actionName === 'increment' ? 1 : -1));
+        release();
+      }}
+      onScrollBeginDrag={() => setDragging(true)} onScrollEndDrag={() => {
+        setDragging(false);
+        release();
+      }}
+      onMomentumScrollEnd={event => {
+        setIndex(Math.max(0, Math.min(titles.length - 1, Math.round(event.nativeEvent.contentOffset.x / width))));
+      }}
+      onPointerDown={event => {
+        if (Platform.OS !== 'web' || event.nativeEvent.pointerType !== 'mouse') return;
+        event.preventDefault();
+        setTouched(true);
+        mouse.current = { start: event.nativeEvent.pageX, offset: offset.value };
+        mouseOffset.current = offset.value;
+        (event.currentTarget as unknown as HTMLElement).setPointerCapture?.(event.nativeEvent.pointerId);
+      }}
+      onPointerMove={event => {
+        if (!mouse.current) return;
+        mouseOffset.current = Math.max(0, Math.min((titles.length - 1) * width,
+          mouse.current.offset + mouse.current.start - event.nativeEvent.pageX));
+        scroll.current?.scrollTo({ x: mouseOffset.current, animated: false });
+      }}
+      onPointerUp={endMouseDrag} onPointerCancel={endMouseDrag}>
+      {titles.map((title, i) => <Slide key={title.slug} item={title} index={i} count={titles.length}
+        width={width} height={height} offset={offset} reducedMotion={reducedMotion} />)}
+    </Animated.ScrollView>
+    <LinearGradient pointerEvents="none" colors={['#0B0D1299', '#0B0D1200']} style={styles.topScrim} />
+    <LinearGradient pointerEvents="none" colors={['#0B0D1200', '#0B0D12F5', colors.bg]}
+      locations={[0, 0.35, 1]} style={styles.bottomScrim} />
+    <View pointerEvents="box-none" style={styles.content}>
       <Text variant="display" numberOfLines={2} accessibilityRole="header">{item.title}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, minHeight: 24 }}>
         {series.data?.genres.slice(0, 3).map(genre => <Chip key={genre} label={genre} tone="cyan" />)}
       </View>
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <ActionButton primary label={`▶ ${t('play')}`} onPress={() => {
+        <Button onPress={() => {
           void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
           router.push({ pathname: episode ? '/watch/[slug]' : '/series/[slug]', params: { slug: episode?.slug ?? item.slug } });
-        }} />
-        <ActionButton label={`${saved ? '✓' : '+'} ${t('myList')}`} onPress={() => {
-          if (saved) setConfirmRemoval(true);
-          else toggle();
-        }} />
+        }}><ButtonText>▶ {t('play')}</ButtonText></Button>
+        <Button variant="secondary" onPress={() => saved ? setConfirmRemoval(true) : toggle()}>
+          <ButtonText>{saved ? '✓' : '+'} {t('myList')}</ButtonText>
+        </Button>
       </View>
-      {storageError && <Text variant="caption">{t('storageError')}</Text>}
+      {storageError && <Text variant="caption" accessibilityRole="alert">{t('storageError')}</Text>}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View accessibilityLabel={`${index + 1} / ${titles.length}`} style={{ flexDirection: 'row', gap: 6 }}>
-          {titles.map((title, i) => <View key={title.slug} style={{ width: i === index ? 20 : 6, height: 6,
-            borderRadius: 3, backgroundColor: i === index ? colors.text : colors['text-muted'] }} />)}
+        <View accessible={false} aria-hidden importantForAccessibility="no-hide-descendants" style={{ flexDirection: 'row', gap: 6 }}>
+          {titles.map((title, i) => <Dot key={title.slug} index={i} offset={offset} width={width} reducedMotion={reducedMotion} active={i === current} />)}
         </View>
-        {titles.length > 1 && <Pressable accessibilityRole="button" accessibilityLabel={t(paused ? 'resumeHero' : 'pauseHero')}
-          onPress={() => setPaused(value => !value)} style={({ pressed }) => ({ minHeight: 48, minWidth: 48, justifyContent: 'center', alignItems: 'center', opacity: pressed ? 0.6 : 1 })}>
-          <Text variant="caption">{t(paused ? 'resumeHero' : 'pauseHero')}</Text>
-        </Pressable>}
+        {titles.length > 1 && <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Button size="icon" variant="ghost" accessibilityLabel={t('previousTitle')} onPress={() => {
+            move(current - 1);
+            release();
+          }}>
+            <Ionicons name="chevron-back" color={colors.text} size={20} />
+          </Button>
+          {!reducedMotion && <Button size="icon" variant="ghost" accessibilityLabel={t(paused ? 'resumeHero' : 'pauseHero')}
+            accessibilityState={{ selected: paused }} onPress={() => setPaused(value => !value)}>
+            <Ionicons name={paused ? 'play' : 'pause'} color={colors.text} size={18} />
+          </Button>}
+          <Button size="icon" variant="ghost" accessibilityLabel={t('nextTitle')} onPress={() => {
+            move(current + 1);
+            release();
+          }}>
+            <Ionicons name="chevron-forward" color={colors.text} size={20} />
+          </Button>
+        </View>}
       </View>
     </View>
     <RemovalDialog open={confirmRemoval} onOpenChange={setConfirmRemoval} title={t('removeBookmark')}
       description={item.title} error={storageError} onRemove={toggle} />
   </View>;
 }
+
 const styles = StyleSheet.create({
-  hero: { height: HERO_HEIGHT, overflow: 'hidden', backgroundColor: colors.surface, justifyContent: 'flex-end' },
-  content: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16, gap: 12 },
+  topScrim: { position: 'absolute', top: 0, left: 0, right: 0, height: 100 },
+  bottomScrim: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 320 },
+  content: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 24, paddingBottom: 8, gap: 12 },
 });

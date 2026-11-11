@@ -5,15 +5,16 @@ import { BlurView } from 'expo-blur';
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Text } from './Text';
 import { colors } from '@/theme';
 
 export const TabBlurTarget = createContext<Record<string, RefObject<ComponentRef<typeof View> | null>>>({});
-export const TAB_BAR_HEIGHT = 64;
+export const TAB_BAR_HEIGHT = 60;
 export function useTabBarInset() { return TAB_BAR_HEIGHT + useSafeAreaInsets().bottom + 28; }
 
 export function GlassTabBar({ state, descriptors, emitter, navigateToTab }: BottomTabBarProps) {
   const { bottom } = useSafeAreaInsets();
+  const [edge, setEdge] = useState(16);
+  const [focusedTab, setFocusedTab] = useState<string | null>(null);
   const targets = useContext(TabBlurTarget);
   const target = targets[state.routes[state.index].name];
   const [width, setWidth] = useState(0);
@@ -25,7 +26,9 @@ export function GlassTabBar({ state, descriptors, emitter, navigateToTab }: Bott
   const cell = (width - 18 + 8) / state.routes.length;
   const indicator = useAnimatedStyle(() => ({ transform: [{ translateX: position.value * cell }] }));
   const liquid = Platform.OS === 'ios' && isGlassEffectAPIAvailable() && isLiquidGlassAvailable();
-  return <View pointerEvents="box-none" style={[styles.position, { bottom: bottom + 12 }]}>
+  return <View pointerEvents="box-none"
+    onLayout={event => setEdge(Math.min(16, Math.max(8, (event.nativeEvent.layout.width + edge * 2 - 290) / 2)))}
+    style={[styles.position, { bottom: bottom + 12, left: edge, right: edge }]}>
     <View style={styles.shadow}>
       <View onLayout={e => setWidth(e.nativeEvent.layout.width)} style={styles.bar}>
         {liquid ? <GlassView colorScheme="dark" tintColor={colors.surface} style={StyleSheet.absoluteFill} />
@@ -38,16 +41,18 @@ export function GlassTabBar({ state, descriptors, emitter, navigateToTab }: Bott
           const focused = state.index === index;
           const label = options.title ?? route.name;
           return <Pressable key={route.key} accessibilityRole="tab" accessibilityState={{ selected: focused }} aria-selected={focused}
+            onFocus={() => setFocusedTab(route.key)} onBlur={() => setFocusedTab(null)}
             accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
             onPress={() => {
               const event = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
               if (!focused && !event.defaultPrevented) navigateToTab(route.key);
             }}
             onLongPress={() => emitter.emit({ type: 'tabLongPress', target: route.key })}
-            style={({ pressed }) => [styles.tab, { opacity: pressed ? 0.65 : 1 }]}>
-            {options.tabBarIcon?.({ focused, color: focused ? colors.brand : colors['text-muted'], size: 23 })}
-            <Text variant="caption" numberOfLines={1} style={{ fontSize: 11,
-              color: focused ? colors.text : colors['text-muted'] }}>{label}</Text>
+            style={({ pressed }) => [styles.tab, { opacity: pressed ? 0.65 : 1 },
+              Platform.OS === 'web' && focusedTab === route.key && {
+                outlineStyle: 'solid', outlineWidth: 2, outlineColor: colors.brand,
+              }]}>
+            {options.tabBarIcon?.({ focused, color: focused ? colors.brand : colors['text-muted'], size: 24 })}
           </Pressable>;
         })}
       </View>
@@ -59,7 +64,7 @@ const styles = StyleSheet.create({
   shadow: { borderRadius: 32, boxShadow: '0 8px 24px rgba(0,0,0,0.32)' },
   bar: { height: TAB_BAR_HEIGHT, borderRadius: 32, overflow: 'hidden', borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)', flexDirection: 'row', gap: 8, paddingHorizontal: 8, alignItems: 'center' },
-  tab: { flex: 1, minWidth: 48, minHeight: 52, alignItems: 'center', justifyContent: 'center', gap: 3 },
-  indicator: { position: 'absolute', left: 12, top: 5, height: 34, borderRadius: 17,
+  tab: { flex: 1, minWidth: 48, minHeight: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  indicator: { position: 'absolute', left: 12, top: 7, height: 44, borderRadius: 22,
     backgroundColor: '#F43F5E26', boxShadow: '0 0 14px rgba(244,63,94,0.18)' },
 });
