@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   getHome,
   getLatest,
+  getSchedule,
   browse,
   genres,
   search,
@@ -62,6 +63,11 @@ app.get('/api/home', wrap(async (req, res) => {
 app.get('/api/latest', wrap(async (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1);
   res.json(await cached(`latest:${page}`, TTL.list, () => getLatest(page)));
+}));
+
+app.get('/api/schedule', wrap(async (req, res) => {
+  const week = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
+  res.json(await cached(`schedule:${week}`, 1800_000, getSchedule));
 }));
 
 app.get('/api/genres', wrap(async (req, res) => {
