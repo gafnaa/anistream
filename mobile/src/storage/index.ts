@@ -56,6 +56,15 @@ function isHistory(value: unknown): value is HistoryItem {
 }
 const bookmarks = createStore<Bookmark>('anistream.bookmarks.v1', isBookmark);
 const history = createStore<HistoryItem>('anistream.history.v1', isHistory);
+const searches = createStore<string>('anistream.searches.v1', (value): value is string => typeof value === 'string' && !!value.trim());
+export const useRecentSearches = searches.useItems;
+export function saveSearch(query: string) {
+  const value = query.trim();
+  return searches.update(current => value
+    ? [value, ...current.filter(item => item.toLowerCase() !== value.toLowerCase())].slice(0, 10) : current);
+}
+export function removeSearch(query: string) { return searches.update(current => current.filter(item => item !== query)); }
+export function clearSearches() { return searches.update(() => []); }
 export const useBookmarks = bookmarks.useItems;
 export const useHistory = history.useItems;
 export const useHistoryHydrated = history.useHydrated;
