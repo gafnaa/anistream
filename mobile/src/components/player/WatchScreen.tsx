@@ -47,7 +47,7 @@ export function WatchScreen({ slug, previewNext = false }: { slug: string; previ
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const full = fullscreen || width > height;
-  const sources = useMemo(() => [...(episode.data?.sources ?? [])].sort((a, b) => Number(a.kind === 'iframe') - Number(b.kind === 'iframe')), [episode.data]);
+  const sources = useMemo(() => [...(episode.data?.sources ?? [])].sort((a, b) => Number(a.type === 'iframe' || a.kind === 'iframe') - Number(b.type === 'iframe' || b.kind === 'iframe')), [episode.data]);
   const mirror = sources[index];
   const resolved = useResolvedSource(!failed && mirror?.kind === 'resolvable' ? mirror.url : '', attempt);
   const source = mirror?.kind === 'iframe' ? { type: 'iframe' as const, url: mirror.url } : resolved.data;

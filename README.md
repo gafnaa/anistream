@@ -108,9 +108,14 @@ npx expo start            # scan the QR code with Expo Go, or press "a" for an A
 | `GET /api/genres` | `[{ slug, name, count? }]` from the catalogue filter; cached 24 hours |
 | `GET /api/search?q=&page=` | Search results |
 | `GET /api/series/:slug` | Series metadata, `genres: string[]`, `genreLinks: [{ slug, name }]`, and episode list |
-| `GET /api/episode/:slug` | Episode info and mirrors |
+| `GET /api/episode/:slug` | Episode info and mirrors; OD fallback sources add `provider`, `quality`, `type` |
 | `GET /api/resolve?mirror=` | Playable source: `hls`, `mp4` or `iframe` |
 | `GET /api/hls?url=` | Proxied HLS manifest or segment |
+
+Episode sources try Otakudesu direct streams by descending quality, then Blogger,
+then xtwap. Otakudesu lookup has a six-second deadline and caches conservative
+anime matches (including misses) for 24 hours. Failure preserves samehadaku mirrors.
+OD MP4s play directly without the proxy.
 
 The full reference is in [`docs/BACKEND.md`](docs/BACKEND.md#api).
 

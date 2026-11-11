@@ -272,13 +272,162 @@ export async function getSeries(slug) {
  *   2. play.xtwap.top/cepat2.php?url= -> a JW Player wrapper that we can resolve
  *      into a real HLS manifest (mp4/m3u8) that our own player can stream
  */
+const OD_BASE = 'https://otakudesu.blog';
+const odMatches = new Map();
+const OD_TTL = 86_400_000;
+
+export function normalizeAnimeTitle(title) {
+  return clean(title.toLowerCase()
+    .replace(/\([^)]*episode[^)]*\)/g, '')
+    .replace(/subtitle\s+indonesia|sub\s+indo|\b(?:19|20)\d{2}\b/g, '')
+    .replace(/\b(?:season\s*(\d+)|(\d+)(?:st|nd|rd|th)\s+season|s(\d+))\b/g, (_, a, b, c) => ` season${a || b || c} `)
+    .replace(/\b(iv|iii|ii)\b/g, token => ` season${{ ii: 2, iii: 3, iv: 4 }[token]} `)
+    .replace(/[^a-z0-9]+/g, ' '));
+}
+
+const seasons = (title) => title.match(/season\d+/g)?.join(' ') ?? '';
+
+/**
+ * 1 for the same title, 0.99 for the same words in another order, 0.9 when the
+ * otakudesu title (3+ words) is a whole-word prefix of samehadaku's longer
+ * light-novel title with the same season. Anything else is 0.
+ */
+export function titleMatchScore(candidate, normalized) {
+  if (candidate === normalized) return 1;
+  if (candidate.split(' ').sort().join(' ') === normalized.split(' ').sort().join(' ')) return 0.99;
+  if (candidate.split(' ').length >= 3 && normalized.startsWith(candidate + ' ') && seasons(candidate) === seasons(normalized)) return 0.9;
+  return 0;
+}
+
+async function odFetch(url, signal, data) {
+  const response = await fetch(url, {
+    signal,
+    headers: { 'User-Agent': UA, Referer: OD_BASE + '/', ...(data ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}) },
+    ...(data ? { method: 'POST', body: new URLSearchParams(data) } : {}),
+  });
+  if (!response.ok) throw new Error(`Otakudesu upstream ${response.status}`);
+  return data ? response.json() : response.text();
+}
+
+async function matchOtakudesu(title, signal) {
+  const normalized = normalizeAnimeTitle(title);
+  const hit = odMatches.get(normalized);
+  if (hit && Date.now() - hit.at < OD_TTL) return hit.url;
+  const words = normalized.replace(/season\d+/g, '').trim().split(' ');
+  const queries = [...new Set([title, words.slice(0, 4).join(' '), words.slice(0, 2).join(' ')])];
+  for (const query of queries) {
+    const $ = cheerio.load(await odFetch(`${OD_BASE}/?${new URLSearchParams({ s: query, post_type: 'anime' })}`, signal));
+    const candidates = new Map();
+    $('h2 a[href*="/anime/"]').each((_, el) => {
+      const candidate = normalizeAnimeTitle($(el).text());
+      // Token equality tolerates punctuation and word order, but never a missing season or subtitle.
+      const score = titleMatchScore(candidate, normalized);
+      const url = $(el).attr('href');
+      if (score && new URL(url).origin === OD_BASE) candidates.set(url, score);
+    });
+    if (candidates.size === 1) {
+      const url = [...candidates.keys()][0];
+      odMatches.set(normalized, { at: Date.now(), url });
+      return url;
+    }
+    if (candidates.size > 1) break;
+  }
+  odMatches.set(normalized, { at: Date.now(), url: null });
+  if (odMatches.size > 1000) odMatches.delete(odMatches.keys().next().value);
+  return null;
+}
+
+async function resolveOdEmbed(url, signal, depth = 0) {
+  const parsed = new URL(url);
+  if (!/^https?:$/.test(parsed.protocol)) throw new Error('Invalid embed protocol');
+  if (/\.(mp4|m3u8)$/i.test(parsed.pathname) && /(^|\.)odcloud\.net$/i.test(parsed.hostname)) {
+    return { type: parsed.pathname.endsWith('.mp4') ? 'mp4' : 'hls', url };
+  }
+  // Only inspect the verified public player. Other hosts may require challenges.
+  if (!/(^|\.)desustream\.net$/i.test(parsed.hostname)) throw new Error('Unverified embed host');
+  const html = await odFetch(url, signal);
+  if (/captcha|cf-chl-|challenge-platform|attestation/i.test(html)) throw new Error('Embed requires challenge');
+  const file = html.match(/https?:\/\/[^"'\s<>]+\.(?:mp4|m3u8)(?:\?[^"'\s<>]*)?/i)?.[0];
+  if (file) return resolveOdEmbed(file.replace(/&amp;/g, '&'), signal, depth + 1);
+  const $ = cheerio.load(html);
+  const inner = $('iframe[src]').first().attr('src');
+  if (inner && depth < 2) return resolveOdEmbed(new URL(inner, url).href, signal, depth + 1);
+  if ($('video, #player, #videoPlayer').length) return { type: 'iframe', url };
+  throw new Error('No embeddable player');
+}
+
+async function getOtakudesuSources(title, number, signal) {
+  const animeUrl = await matchOtakudesu(title, signal);
+  if (!animeUrl) return [];
+  const $ = cheerio.load(await odFetch(animeUrl, signal));
+  const episodes = new Set();
+  $('a[href*="/episode/"]').each((_, el) => {
+    const href = $(el).attr('href');
+    const episode = $(el).text().match(/episode\s*(\d+(?:\.\d+)?)(?!\d)/i);
+    if (episode && Number(episode[1]) === number && new URL(href).origin === OD_BASE) episodes.add(href);
+  });
+  if (episodes.size !== 1) return [];
+  const episodeUrl = [...episodes][0];
+  const html = await odFetch(episodeUrl, signal);
+  const page = cheerio.load(html);
+  const mirrors = [];
+  page('a[data-content]').each((_, el) => {
+    if (!/^(odcdn|odstream)$/i.test(clean(page(el).text()))) return;
+    try {
+      const data = JSON.parse(Buffer.from(page(el).attr('data-content'), 'base64').toString());
+      if (Number.isInteger(data.id) && Number.isInteger(data.i) && /^(360|480|720|1080)p$/.test(data.q)) mirrors.push(data);
+    } catch { /* Ignore malformed upstream mirror data. */ }
+  });
+  const results = [];
+  const add = async (url, quality) => {
+    const stream = await resolveOdEmbed(url, signal);
+    const actualQuality = stream.url.match(/[_-](\d{3,4}p)\./)?.[1] || quality;
+    results.push({ label: `OD ${actualQuality || 'default'}`, provider: 'otakudesu', quality: actualQuality || null,
+      type: stream.type, kind: stream.type === 'iframe' ? 'iframe' : 'resolvable', url: stream.url, host: new URL(stream.url).hostname });
+  };
+  const defaultUrl = page('#pembed iframe').attr('src');
+  const tasks = [];
+  if (defaultUrl) tasks.push(add(defaultUrl, null));
+  if (mirrors.length) {
+    tasks.push((async () => {
+      const scripts = page('script:not([src])').map((_, el) => page(el).html()).get().join('\n');
+      const nonceAction = scripts.match(/data:\s*\{\s*action:\s*["']([a-f0-9]{32})["']/)?.[1] || 'aa1208d27f29ca340c92c66d1926f13f';
+      const mirrorAction = scripts.match(/nonce:[^,}]+,\s*action:\s*["']([a-f0-9]{32})["']/)?.[1] || '2a3505c93b0035d3f455df82bf976b84';
+      const { data: nonce } = await odFetch(`${OD_BASE}/wp-admin/admin-ajax.php`, signal, { action: nonceAction });
+      await Promise.allSettled(mirrors.map(async mirror => {
+        const { data } = await odFetch(`${OD_BASE}/wp-admin/admin-ajax.php`, signal, { ...mirror, nonce, action: mirrorAction });
+        const frame = cheerio.load(Buffer.from(data, 'base64').toString())('iframe').attr('src');
+        if (frame) await add(frame, mirror.q);
+      }));
+    })());
+  }
+  await Promise.allSettled(tasks);
+  return [...new Map(results.map(source => [source.url, source])).values()]
+    .sort((a, b) => Number(a.type === 'iframe') - Number(b.type === 'iframe') || parseInt(b.quality || '0') - parseInt(a.quality || '0'));
+}
+
 export async function getEpisode(slug) {
+  const odController = new AbortController();
+  const odTimer = setTimeout(() => odController.abort(), 6000);
+  const episodeNumber = slug.match(/episode-(\d+(?:\.\d+)?)/)?.[1];
+  const odTitle = slug.replace(/-episode-.*$/, "").replaceAll("-", " ");
+  let odSources = episodeNumber
+    ? getOtakudesuSources(odTitle, Number(episodeNumber), odController.signal).catch(() => [])
+    : Promise.resolve([]);
   const url = `${BASE}/${slug}/`;
-  const html = await fetchPage(url);
+  const html = await fetchPage(url).catch(error => { clearTimeout(odTimer); odController.abort(); throw error; });
   const $ = cheerio.load(html);
 
   const title = clean($('h1.entry-title').first().text());
-  if (!title) throw new Error('Episode not found');
+  if (!title) {
+    clearTimeout(odTimer);
+    odController.abort();
+    throw new Error('Episode not found');
+  }
+  if (!episodeNumber) {
+    const number = title.match(/episode\s+(\d+(?:\.\d+)?)/i)?.[1];
+    if (number) odSources = getOtakudesuSources(title.replace(/\s*episode\s+.*$/i, ''), Number(number), odController.signal).catch(() => []);
+  }
 
   const seriesHref = $('.naveps a[href*="/anime/"]').attr('href') || $('.single-info h2[itemprop="partOfSeries"]').closest('a').attr('href');
   const seriesTitle = clean($('.single-info h2[itemprop="partOfSeries"]').text()) || null;
@@ -324,7 +473,7 @@ export async function getEpisode(slug) {
     seriesTitle,
     prevSlug: slugFromUrl(prev),
     nextSlug: slugFromUrl(next),
-    sources,
+    sources: [...await odSources.finally(() => clearTimeout(odTimer)), ...sources.sort((a, b) => Number(a.host.includes("xtwap")) - Number(b.host.includes("xtwap")))],
     raw,
   };
 }
@@ -340,6 +489,9 @@ export async function resolveMirror(mirrorUrl) {
     host = new URL(mirrorUrl).hostname;
   } catch {
     throw new Error('Invalid mirror URL');
+  }
+  if (/(^|\.)(desustream.net|odcloud.net)$/.test(host)) {
+    return resolveOdEmbed(mirrorUrl, AbortSignal.timeout(6000));
   }
   if (host.includes('blogger.com')) {
     return { type: 'iframe', url: mirrorUrl, host };

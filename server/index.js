@@ -105,7 +105,7 @@ app.get('/api/resolve', wrap(async (req, res) => {
     return res.status(400).json({ error: 'Invalid mirror URL' });
   }
 
-  const allowed = /(^|\.)(xtwap\.top|blogger\.com|samehadaku\.li|ok\.ru|dailymotion\.com|youtube\.com|youtu\.be|drive\.google\.com|desustream|filemoon|acefile|bilibili)/i;
+  const allowed = /(^|\.)(xtwap\.top|blogger\.com|samehadaku\.li|ok\.ru|dailymotion\.com|youtube\.com|youtu\.be|drive\.google\.com|desustream\.net$|odcloud\.net$|filemoon|acefile|bilibili)/i;
   if (!allowed.test(host)) {
     return res.status(400).json({ error: `Mirror host not allowed: ${host}` });
   }
@@ -130,7 +130,7 @@ app.get('/api/resolve', wrap(async (req, res) => {
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-const HOST_RE = /(^|\.)(xtwap\.top|blogger\.com|googlevideo\.com|googleusercontent\.com|akamaized\.net|cloudfront\.net|samehadaku\.li|wp\.com)$/i;
+const HOST_RE = /(^|\.)(xtwap\.top|blogger\.com|googlevideo\.com|googleusercontent\.com|akamaized\.net|cloudfront\.net|samehadaku\.li|wp\.com|odcloud\.net)$/i;
 
 function assertAllowed(target) {
   const u = new URL(target);
