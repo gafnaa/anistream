@@ -5,6 +5,7 @@ import {
   getHome,
   getLatest,
   browse,
+  genres,
   search,
   getSeries,
   getEpisode,
@@ -27,6 +28,7 @@ const TTL = {
   series: 120_000,
   episode: 120_000,
   stream: 300_000,
+  genres: 86_400_000,
 };
 
 function cached(key, ttl, fn) {
@@ -36,7 +38,7 @@ function cached(key, ttl, fn) {
     cache.set(key, { at: Date.now(), value });
     if (cache.size > 500) {
       for (const [k, v] of cache) {
-        if (Date.now() - v.at > 600_000) cache.delete(k);
+        if (k !== 'genres' && Date.now() - v.at > 600_000) cache.delete(k);
       }
     }
     return value;
@@ -60,6 +62,10 @@ app.get('/api/home', wrap(async (req, res) => {
 app.get('/api/latest', wrap(async (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1);
   res.json(await cached(`latest:${page}`, TTL.list, () => getLatest(page)));
+}));
+
+app.get('/api/genres', wrap(async (req, res) => {
+  res.json(await cached('genres', TTL.genres, genres));
 }));
 
 app.get('/api/browse', wrap(async (req, res) => {

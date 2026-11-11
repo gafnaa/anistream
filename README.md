@@ -105,8 +105,9 @@ npx expo start            # scan the QR code with Expo Go, or press "a" for an A
 | `GET /api/home` | Latest, ongoing and trending lists |
 | `GET /api/latest?page=` | Latest episode releases |
 | `GET /api/browse?status=&type=&order=&genre=&page=` | Catalogue |
+| `GET /api/genres` | `[{ slug, name, count? }]` from the catalogue filter; cached 24 hours |
 | `GET /api/search?q=&page=` | Search results |
-| `GET /api/series/:slug` | Series metadata and episode list |
+| `GET /api/series/:slug` | Series metadata, `genres: string[]`, `genreLinks: [{ slug, name }]`, and episode list |
 | `GET /api/episode/:slug` | Episode info and mirrors |
 | `GET /api/resolve?mirror=` | Playable source: `hls`, `mp4` or `iframe` |
 | `GET /api/hls?url=` | Proxied HLS manifest or segment |

@@ -83,13 +83,14 @@ If a stream fails, the player automatically hops to the next mirror.
 | `GET /api/home` | `{ latest[], ongoing[], trending[] }` |
 | `GET /api/latest?page=` | Latest episode releases |
 | `GET /api/browse?status=&type=&order=&genre=&page=` | Catalogue |
+| `GET /api/genres` | `[{ slug, name, count? }]` from the catalogue filter; cached 24 hours |
 | `GET /api/search?q=&page=` | Search results |
-| `GET /api/series/:slug` | Metadata, synopsis, genres, episodes |
+| `GET /api/series/:slug` | Metadata, synopsis, `genres: string[]`, `genreLinks: [{ slug, name }]`, episodes |
 | `GET /api/episode/:slug` | Episode info + mirror list |
 | `GET /api/resolve?mirror=` | `{ type: hls\|mp4\|iframe, url, playUrl }` |
 | `GET /api/hls?url=` | Proxied manifest / segment |
 
-Responses are cached in memory (60–300s) so navigating back and forth doesn't
+Responses are cached in memory (60–300s; genres for 24 hours) so navigating back and forth doesn't
 re-scrape the upstream site every time.
 
 ---

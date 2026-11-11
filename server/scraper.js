@@ -147,6 +147,18 @@ const ORDER_MAP = {
   title: 'title',
 };
 
+export async function genres() {
+  const $ = cheerio.load(await fetchPage(`${BASE}/anime/`));
+  const items = new Map();
+  $('input[name="genre[]"]').each((_, el) => {
+    const slug = clean($(el).attr('value'));
+    const name = clean($(el).parent().find('label').text());
+    if (slug && name) items.set(slug, { slug, name });
+  });
+  if (!items.size) throw new Error('Genre filter not found');
+  return [...items.values()];
+}
+
 /** Browse the anime catalogue with status/type/order filters. */
 export async function browse({ status = '', type = '', order = 'update', page = 1, genre = '' } = {}) {
   const params = new URLSearchParams();
@@ -235,6 +247,10 @@ export async function getSeries(slug) {
     banner: image,
     synopsis,
     genres,
+    genreLinks: info.find('.genxed a').map((_, el) => ({
+      slug: slugFromUrl($(el).attr('href')),
+      name: clean($(el).text()),
+    })).get().filter(item => item.slug && item.name),
     trailerId,
     status: fields.status || null,
     studio: fields.studio || null,
