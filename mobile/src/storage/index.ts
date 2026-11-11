@@ -66,6 +66,8 @@ export function saveSearch(query: string) {
 export function removeSearch(query: string) { return searches.update(current => current.filter(item => item !== query)); }
 export function clearSearches() { return searches.update(() => []); }
 export const useBookmarks = bookmarks.useItems;
+export const useBookmarksHydrated = bookmarks.useHydrated;
+export function clearHistory() { return history.update(() => []); }
 export const useHistory = history.useItems;
 export const useHistoryHydrated = history.useHydrated;
 export function useIsBookmarked(slug: string) {

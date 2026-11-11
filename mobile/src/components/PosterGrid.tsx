@@ -10,7 +10,8 @@ import { useDelayedSkeleton } from '@/hooks/useDelayedSkeleton';
 import { t } from '@/i18n';
 
 export function PosterGrid({ items, header, loading = false, error = false, retry, next, fetchingNext = false,
-  tabScreen = false, empty, footer }: {
+  tabScreen = false, empty, footer, onLongPress }: {
+  onLongPress?: (item: CardItem) => void;
   items: CardItem[]; header?: ReactElement; loading?: boolean; error?: boolean; retry: () => void;
   next?: () => void; fetchingNext?: boolean; tabScreen?: boolean; empty?: ReactElement; footer?: ReactElement;
 }) {
@@ -33,7 +34,7 @@ export function PosterGrid({ items, header, loading = false, error = false, retr
     contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: tabScreen ? tabInset : insets.bottom + 100 }}
     columnWrapperStyle={{ gap: 12 }} initialNumToRender={12} windowSize={5}
     ListHeaderComponent={header}
-    renderItem={({ item }) => <View style={{ paddingBottom: 20 }}><PosterCard item={item} width={posterWidth} /></View>}
+    renderItem={({ item }) => <View style={{ paddingBottom: 20 }}><PosterCard item={item} width={posterWidth} onLongPress={onLongPress ? () => onLongPress(item) : undefined} /></View>}
     ListEmptyComponent={loading ? <View style={{ minHeight: 600 }}>{showSkeleton && skeletons}</View>
       : error ? failure : empty ?? <Text muted style={{ paddingVertical: 24 }}>{t('emptyRow')}</Text>}
     ListFooterComponent={unique.length > 0 ? error ? failure : fetchingNext ? skeletons : footer : undefined}
