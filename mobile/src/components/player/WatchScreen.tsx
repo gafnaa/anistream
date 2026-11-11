@@ -112,10 +112,11 @@ export function WatchScreen({ slug, previewNext = false }: { slug: string; previ
     <PlayerButton icon="play-skip-forward" label={t('nextEpisode')} disabled={!episode.data?.nextSlug} onPress={next} />
   </View>;
   const chrome = <View pointerEvents="box-none" style={{ position: 'absolute', top: full ? Math.max(insets.top, 12) : 8, left: Math.max(insets.left, 12), right: Math.max(insets.right, 12), flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
-    <PlayerButton icon="arrow-back" label={t('back')} onPress={goBack} />
-    <View style={styles.row}>{navigation}<PlayerButton icon="server-outline" label={t('servers')} onPress={() => setPicker(value => !value)} />
+    {full ? <PlayerButton icon="arrow-back" label={t('back')} onPress={goBack} /> : <View />}
+    <View style={styles.row}>{navigation}{full && <PlayerButton icon="server-outline" label={t('servers')} onPress={() => setPicker(value => !value)} />}
       {source?.type !== 'iframe' && <PlayerButton icon={full ? 'contract' : 'expand'} label={t(full ? 'exitFullscreen' : 'fullscreen')} onPress={toggleFull} />}</View>
   </View>;
+  const episodeTitle = episode.data ? episode.data.title.replace(/\s*subtitle indonesia\s*$/i, '').replace(episode.data.seriesTitle ?? '', '').trim() || episode.data.title : '';
   const error = failed || episode.isError || (episode.isSuccess && !sources.length);
   return <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: full ? 0 : insets.top }}>
     <AmbientBackground />
@@ -145,7 +146,7 @@ export function WatchScreen({ slug, previewNext = false }: { slug: string; previ
       contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: insets.bottom + 24 }}
       ListHeaderComponent={<View style={{ paddingTop: 24, paddingBottom: 16, gap: 16 }}>
         {episode.isPending ? <SkeletonText lines={2} /> : <>
-                    <Text variant="h2">{episode.data?.title}</Text>
+          <Text variant="h2">{episodeTitle}</Text>
           {!!episode.data?.seriesSlug && <Button variant="link" style={{ alignSelf: 'flex-start', maxWidth: '100%', paddingHorizontal: 0 }}
             onPress={() => router.replace({ pathname: '/series/[slug]', params: { slug: episode.data!.seriesSlug! } })}>
             <Text style={{ color: colors.accent, flexShrink: 1 }}>{episode.data.seriesTitle}</Text>
