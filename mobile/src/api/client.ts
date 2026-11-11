@@ -20,7 +20,9 @@ export async function apiGet<T>(path: string, params: Record<string, string | nu
   let timedOut = false;
   const timer = setTimeout(() => { timedOut = true; controller.abort(); }, TIMEOUT_MS);
   try {
-    const response = await fetch(`${API_URL}${path}${query.size ? `?${query}` : ''}`, { signal: controller.signal });
+    // URLSearchParams.size is not available on every React Native runtime; toString() is.
+    const qs = query.toString();
+    const response = await fetch(`${API_URL}${path}${qs ? `?${qs}` : ''}`, { signal: controller.signal });
     let body: unknown;
     try { body = await response.json(); } catch {
       throw new ApiError('The API returned an invalid JSON response.', response.status);

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type PropsWithChildren 
 import { Pressable, View, StyleSheet, type DimensionValue, type ViewStyle } from 'react-native';
 import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { colors, radius, spacing } from '@/theme';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Text } from '@/components/Text';
 import { t } from '@/i18n';
 
@@ -36,8 +37,8 @@ export function SkeletonBox({ width = '100%', height = 16, style }: BoxProps) {
   return <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
     onLayout={event => setBoxWidth(event.nativeEvent.layout.width)} style={[styles.box, { width, height }, style]}>
     {!reducedMotion && running && <Animated.View style={[styles.sweep, { width: boxWidth * 0.5 }, sweep]}>
-      {Array.from({ length: 16 }, (_, index) => <View key={index} style={{ flex: 1,
-        backgroundColor: colors['card-2'], opacity: 1 - Math.abs((index - 7.5) / 8) }} />)}
+      <LinearGradient style={StyleSheet.absoluteFill} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+        colors={[`${colors['card-2']}00`, colors['card-2'], `${colors['card-2']}00`]} />
     </Animated.View>}
   </View>;
 }
@@ -59,7 +60,7 @@ export function RowSkeleton() {
 }
 export function HeroSkeleton() {
   return <View style={styles.hero}>
-    <SkeletonBox height="100%" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+    <SkeletonBox height="100%" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.surface }} />
     <View style={styles.heroText}><SkeletonText lines={2} lineHeight={32} />
       <SkeletonBox width="40%" height={16} /><SkeletonBox width="60%" height={48} /></View>
   </View>;
