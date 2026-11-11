@@ -2,10 +2,11 @@
 
 | | |
 |---|---|
-| Status | Draft v0.1 — for review |
+| Status | Draft v0.2: for review |
 | Date | 2026-11-11 |
 | Owner | @gafnaa |
 | Predecessor | Web prototype in this repo (`src/`, `server/`) |
+| Changes in v0.2 | Streaming-app information architecture (§5), new Design system & UX section (§6), skeleton loading, typography, updated milestones |
 
 ---
 
@@ -13,30 +14,45 @@
 
 AniStream Mobile is a native Android/iOS app for browsing and watching anime with
 Indonesian subtitles. Catalogue data and video sources come from samehadaku via
-the **existing AniStream API** (`server/`) in this repo. The web prototype has
-already proven the data flow and playback. This project ports the experience to
-React Native while keeping all scraping and stream resolution on the server.
+the **existing AniStream API** (`server/`) in this repo.
+
+The app follows the layout patterns of mainstream video-streaming apps:
+
+- a cinematic home screen with horizontal rows
+- a hero banner
+- a dedicated watch history
+- browsing by genre
+- a settings area
+
+AniStream uses these as interaction patterns only. It has its own visual identity
+(see §6), and copies no other service's branding, colours or assets.
 
 ## 2. Goals and non-goals
 
 ### Goals
-1. Feature parity with the web prototype: home, browse, search, series detail, watch, library.
+1. A streaming-app experience. Opening the app shows something worth watching, and resuming takes one tap.
 2. Reliable playback of both mirror types: HLS streams in a native player, and Blogger embeds in a WebView.
-3. Fast, native-feeling UI: cached lists, smooth scrolling, fullscreen landscape playback.
+3. A UI that feels fast and polished:
+   - skeleton loading, with no blank screens or bare spinners
+   - smooth 60 fps scrolling
+   - a professional type system
 4. One codebase for Android and iOS. Android is the primary target.
 
 ### Non-goals (v1)
-- User accounts, cloud sync, comments, ratings.
+- User accounts, cloud sync, multiple profiles, comments, ratings.
 - Offline downloads.
-- Push notifications for new episodes. This is a v2 candidate, see §9.
+- Push notifications. This is a v2 candidate, see §10.
 - Running the scraper on the device. The scraper stays server-side.
-- Publishing to the Play Store or App Store. v1 ships as sideloaded builds (APK or Expo dev build).
+- Publishing to the Play Store or App Store. v1 ships as a sideloaded APK through the release pipeline.
 
 ## 3. Users
 
 - **Primary:** Indonesian-speaking anime viewers who currently use samehadaku in a
   mobile browser and put up with ads, pop-ups, and a desktop-first layout.
-- **Core job:** "Find the new episode of the show I follow and start watching it in two taps."
+- **Core jobs:**
+  1. "Continue the episode I was watching." This takes 1 tap from Home.
+  2. "Watch the new episode of a show I follow." This takes 2 taps from Home.
+  3. "Find something new in a genre I like." This takes 3 taps or fewer from Discover.
 
 ## 4. Architecture
 
@@ -47,126 +63,302 @@ React Native while keeping all scraping and stream resolution on the server.
 └────────────────────┘                └──────────────────────┘              └────────────┘
 ```
 
-- **Repo layout:** the app lives in a new `mobile/` folder. `server/` and the web `src/` stay where they are.
-- **Backend:** reuse the existing endpoints unchanged (see `docs/BACKEND.md` → API). The app
+- **Repo layout:** the app lives in `mobile/`. `server/` and the web `src/` stay where they are.
+- **Backend:** reuse the existing endpoints (see `docs/BACKEND.md` → API). The app
   reads the base URL from `EXPO_PUBLIC_API_URL`. The default is the tailnet URL
   `https://waf-server.tail1ec650.ts.net:5175`.
+- **New endpoints needed** (server work, done in the milestone that needs it):
+  - `GET /api/genres`: genre list with slugs, for Discover. Scraped from the site's genre filter.
+  - `GET /api/schedule`: weekly release schedule, for the New Episodes screen. Only if the site exposes one (spike in M4).
 - **Why the scraper stays on the server:** the site sits behind a WAF that needs browser-like
   headers, its markup changes often, and a server fix reaches every installed app
   at once without an app update.
 - **HLS:** play through `/api/hls` (the proxy) by default. Native players aren't bound by
   CORS, so direct playback with `Referer` headers might work. Treat that as an
-  optimisation to investigate (§10), not a v1 requirement.
+  optimisation to investigate (§11), not a v1 requirement.
 
-### Proposed stack
+### Stack
 
 | Concern | Choice | Reason |
 |---|---|---|
-| Framework | Expo (current SDK), TypeScript | Managed native builds, OTA updates, dev client |
-| Navigation | Expo Router (file-based) | Mirrors the web routes 1:1 |
-| Data fetching | TanStack Query | Caching, pagination, retry, pull-to-refresh |
+| Framework | Expo SDK 58, TypeScript (strict) | Managed native builds, OTA updates, dev client |
+| Navigation | Expo Router (file-based, `src/app/`) | Tabs plus stacks, deep links for free |
+| Data fetching | TanStack Query | Caching, pagination, retry, pull-to-refresh, stale-while-revalidate |
 | Video (HLS/MP4) | `expo-video` | Native ExoPlayer/AVPlayer, fullscreen, PiP |
 | Iframe mirrors | `react-native-webview` | Blogger player has no extractable manifest |
-| Local storage | `@react-native-async-storage/async-storage` | Watchlist and history; same shape as the web `storage.js` |
-| Images | `expo-image` | Disk cache for posters |
-| Lists | `@shopify/flash-list` | Long episode lists and grids |
+| Local storage | `@react-native-async-storage/async-storage` | History, My List and settings; same shape as the web `storage.js` |
+| Images | `expo-image` | Disk cache, blurhash or crossfade placeholders |
+| Lists | `@shopify/flash-list` | Long grids and episode lists |
+| Fonts | `expo-font` + `@expo-google-fonts/*` | Bundled at build time, no runtime download (§6.2) |
+| Animation | `react-native-reanimated` (already installed) | Skeleton shimmer, hero parallax, press feedback on the UI thread |
+| Gradients | `expo-linear-gradient` | Hero scrim and fades at row edges |
+| Haptics | `expo-haptics` | Light feedback on key actions |
 
-## 5. Functional requirements
+## 5. Information architecture and screens
+
+### 5.1 Navigation map
+
+```
+Bottom tabs (always visible except in the player)
+├── Home            /(tabs)/index
+├── Discover        /(tabs)/discover      → Search (/search), Genre (/genre/[slug])
+├── New             /(tabs)/new           (latest episodes + schedule)
+├── History         /(tabs)/history
+└── My Space        /(tabs)/me            → My List, Settings/*
+
+Stacks pushed over the tabs
+├── Series detail   /series/[slug]
+├── Watch (player)  /watch/[slug]         (full screen, tabs hidden)
+├── Genre results   /genre/[slug]
+├── Search          /search               (modal-style; opens with the keyboard up)
+└── Settings        /settings, /settings/playback, /settings/storage, /settings/about
+```
+
+Why five tabs: a mobile tab bar holds at most 5 items before targets get too small
+(Hick's law and thumb reach). Each tab answers one question:
+- **Home:** what should I watch?
+- **Discover:** find a specific show or genre.
+- **New:** what came out today?
+- **History:** where was I?
+- **My Space:** my list and preferences.
 
 Priority: **P0** = required for v1, **P1** = should ship in v1, **P2** = later.
 
-### 5.1 Home — `/(tabs)/index`
-- P0: Trending carousel, an "Ongoing" horizontal rail, and a grid of the latest episodes (`GET /api/home`).
-- P0: Infinite scroll on the latest grid (`GET /api/latest?page=`).
-- P0: Pull to refresh.
-- P1: A "Continue watching" rail built from local history.
+### 5.2 Home — `/(tabs)/index`
+The main entry point. A vertical feed of horizontal rows under a hero.
+- P0 **Hero banner**: one featured title from trending, shown as a full-bleed image with a gradient scrim. It shows the title, genre chips, and two buttons: **▶ Play** (latest episode) and **+ My List**. It auto-rotates through 5 trending titles every 8 s and pauses while the user touches it.
+- P0 **Continue Watching** row (local history): landscape cards with a progress bar, `S1 · E12`, and the time left. It's hidden when empty. Long-press offers "Remove from row" and "Mark as watched".
+- P0 Rows, each loaded on its own with its own skeleton:
+  - **Trending Now**
+  - **Ongoing Series**
+  - **Latest Episodes**: landscape episode cards
+  - **Completed Series**
+- P1 **Because you watched _X_**: a genre-matched row, built from the genres of the user's history.
+- P1 **Top genres**: rows for 2–3 popular genres (e.g. Action, Romance, Isekai).
+- P0 A transparent app bar becomes solid as the user scrolls. It has a search icon that opens Search.
+- P0 Pull to refresh. Rows show a skeleton the first time they load and cached data after that (§6.4).
 
-### 5.2 Browse — `/(tabs)/browse`
-- P0: Filters for status (ongoing/completed/upcoming), type, and order (`GET /api/browse`).
-- P1: Genre filter.
-- P0: Paginated grid.
+### 5.3 Discover — `/(tabs)/discover`
+Browse by intent rather than by URL.
+- P0 A search field at the top. Tapping it opens Search (§5.4).
+- P0 A **Genre grid**: 2-column tiles with the genre name over an artwork collage or a tinted gradient. Tapping one opens Genre results. Data: `GET /api/genres`.
+- P0 Quick filters as chips: **Ongoing · Completed · Movie · TV · OVA**. They open the catalogue already filtered.
+- P1 "Popular searches": the 8 most common queries, kept locally.
 
-### 5.3 Search — `/(tabs)/search`
-- P0: Search runs 300 ms after the user stops typing (`GET /api/search?q=`), with an empty state and a no-results state.
-- P2: Recent searches, stored locally.
+### 5.4 Search — `/search`
+- P0 Results come in 300 ms after the user stops typing (`GET /api/search?q=`), shown as a 3-column poster grid.
+- P0 States:
+  - before typing: recent searches, removable
+  - while loading: skeleton grid
+  - no results: a message plus genre suggestions
+  - error: retry button
+- P1 Filter sheet: status, type, order (`GET /api/browse`).
 
-### 5.4 Series detail — `/series/[slug]`
-- P0: Poster, title, metadata, genres, synopsis, and episode list (`GET /api/series/:slug`).
-- P0: Watchlist toggle.
-- P0: The episode list marks watched episodes and highlights the last-watched episode.
-- P1: Sort the episode list ascending or descending.
+### 5.5 Genre results — `/genre/[slug]`
+- P0 A header with the genre name and the result count once known, then an infinite 3-column poster grid (`GET /api/browse?genre=`).
+- P0 Sort: Latest update · A–Z · Popular, from the `order` param.
+- P1 Status filter chips.
 
-### 5.5 Watch — `/watch/[slug]`
-- P0: Fetch the episode (`GET /api/episode/:slug`), then resolve the selected mirror (`GET /api/resolve`).
-- P0: `hls` / `mp4` → `expo-video` with native controls. `iframe` → WebView, with pop-ups and navigation away blocked.
-- P0: A server switcher. If a mirror errors or stalls for 15 s, switch to the next mirror automatically.
-- P0: Previous and next episode buttons, plus the full episode list below the player.
-- P0: Fullscreen locks the screen to landscape. Exiting returns to portrait.
-- P0: Save playback position every 5 s and when the user leaves the screen. Resume from that position on return.
-- P1: Picture-in-picture on Android and iOS, HLS only.
-- P2: Quality picker (the HLS ladder is 480/720/1080).
+### 5.6 New — `/(tabs)/new`
+- P0 **Latest episodes**: a list of the newest releases (`GET /api/latest`), grouped by **Today · Yesterday · This week**. Each row shows a thumbnail, series title, episode number and time since release.
+- P1 **Schedule**: a day picker (Mon–Sun) listing the series airing that day. It depends on `GET /api/schedule` (spike).
+- P1 Badge on episodes from series in My List.
 
-### 5.6 Library — `/(tabs)/library`
-- P0: A "Continue watching" list showing progress, and the saved watchlist.
-- P0: Remove items from either list.
+### 5.7 History — `/(tabs)/history`
+The user's watch history.
+- P0 A list of episodes watched, newest first, grouped by day. Each row shows a thumbnail, series and episode, a progress bar, and "Watched 2 h ago".
+- P0 Tapping a row resumes at the saved position. Tapping the series name opens Series detail.
+- P0 Swipe left to remove one entry. "Clear history" in the header asks for confirmation.
+- P0 Empty state: an illustration, the text "Nothing here yet", and a **Browse anime** button.
+- P1 Toggle between **All episodes** and **By series**, which collapses to the latest episode per series.
 
-### 5.7 Cross-cutting
-- P0: Dark theme with the same palette as the web prototype.
-- P0: Error states with retry on every screen that loads data. Offline banner.
-- P1: Shared links: `anistream://series/<slug>` and `anistream://watch/<slug>`.
-- P1: Settings screen with an API base URL override, for pointing at a dev server.
+### 5.8 My Space — `/(tabs)/me`
+- P0 **My List**: a grid of saved series. Sort by date added or A–Z. Long-press to remove.
+- P0 Quick stats: "Watched 128 episodes · 41 h". Computed locally.
+- P0 Entry rows: Settings, About.
 
-## 6. Non-functional requirements
+### 5.9 Series detail — `/series/[slug]`
+- P0 A backdrop image with a gradient, the poster, title, and a meta line (status · type · year · episode count), plus genre chips that link to Genre results.
+- P0 Main buttons: **▶ Play E1** or **▶ Resume E12 (14:20)** from history, and **+ My List**.
+- P0 Synopsis clamped to 3 lines, with a "More" option.
+- P0 Episode list:
+  - watched episodes are marked, and the in-progress one shows a progress bar
+  - sort ascending or descending
+  - for 50+ episodes, a range picker in chunks (1–50, 51–100…)
+- P1 A **More like this** row (same genre).
+- P1 Share button that sends an `anistream://series/<slug>` link.
+
+### 5.10 Watch — `/watch/[slug]`
+- P0 Fetch the episode (`GET /api/episode/:slug`), then resolve the selected mirror (`GET /api/resolve`).
+- P0 `hls`/`mp4` → `expo-video`; `iframe` → WebView, with pop-ups and navigation away blocked.
+- P0 Custom controls overlay:
+  - play/pause, a ±10 s double-tap seek zone, and a scrubber with time
+  - server picker, previous/next episode, fullscreen
+  - the controls auto-hide after 3 s
+- P0 If a mirror errors or stalls for 15 s, switch to the next mirror automatically and show a toast ("Switched to HD-2").
+- P0 Fullscreen locks the screen to landscape. Exiting returns to portrait.
+- P0 Save the position every 5 s and when the user leaves the screen. Resume where they left off.
+- P0 **Up next** card in the last 30 s, with a 10 s countdown before autoplaying the next episode. This can be turned off in Settings.
+- P1 Picture-in-picture (HLS only). Keep the screen awake while playing.
+- P2 Quality picker (480/720/1080), playback speed.
+
+### 5.11 Settings — `/settings/*`
+- P0 **Playback**:
+  - autoplay next episode (on)
+  - preferred server order
+  - resume where I left off (on)
+- P0 **Data & storage**:
+  - clear image cache (shows its size)
+  - clear watch history
+  - clear search history
+- P0 **About**:
+  - app version and build number
+  - a "Check for updates" link to GitHub Releases
+  - open-source licenses
+  - the disclaimer
+- P1 **Language**: Bahasa Indonesia / English. Defaults to the device language. All copy goes through an i18n layer from day one.
+- P1 **Appearance**: dark (default) or AMOLED black.
+- P1 **Developer**, hidden until the version number is tapped 7 times: API base URL override, and an option to show the network inspector.
+
+### 5.12 First run and system screens
+- P0 **Splash**: brand mark on the background colour, through `expo-splash-screen`. It stays up until fonts and cached data are ready, so there's no flash of unstyled text.
+- P1 **Onboarding**, one screen, can be skipped: "Pick genres you like" chips. These seed the "Top genres" rows on Home.
+- P0 **Offline** banner across the app, plus a full-screen "No connection" state with retry on screens that have no cached data.
+- P0 **Not found / error** screen for bad deep links.
+
+## 6. Design system and UX principles
+
+### 6.1 Visual identity
+- Dark-first, cinematic. Content (artwork) is the hero and the UI chrome recedes.
+- Colour tokens, derived from the web prototype so both clients feel related:
+
+| Token | Value | Use |
+|---|---|---|
+| `bg` | `#0B0D12` | App background |
+| `surface` | `#12151D` | Tab bar, sheets |
+| `card` | `#171B25` | Cards, skeleton base |
+| `card-2` | `#1E2431` | Pressed states, skeleton highlight |
+| `line` | `#262C3A` | Dividers |
+| `text` | `#EEF1F7` | Primary text |
+| `text-muted` | `#8B93A7` | Secondary text (6.3:1 on `bg`, 5.6:1 on `card`) |
+| `brand` | `#7C5CFF` | Progress bars, active tab, focus rings, icons |
+| `brand-strong` | `#6C4CF0` | Primary button fill. White label is 5.3:1; white on `brand` is only 4.35:1 and fails AA |
+| `brand-2` | `#4D7CFF` | Gradients with `brand` |
+| `accent` | `#FF4D6D` | "NEW" badges, live or airing markers |
+
+- Radius: 6 (chips), 10 (cards), 14 (sheets). Spacing on a 4 pt grid: 4, 8, 12, 16, 24, 32.
+- Poster ratio is **2:3**, and episode or continue-watching cards are **16:9**. Every image keeps its box size while loading, so the layout never shifts.
+
+### 6.2 Typography
+Two professional typefaces, both open-source (OFL) and bundled with `@expo-google-fonts`:
+
+| Role | Typeface | Why |
+|---|---|---|
+| Display and headings | **Plus Jakarta Sans** (600/700/800) | A modern geometric sans designed in Indonesia. Gives titles and the hero a confident, branded voice |
+| UI and body | **Inter** (400/500/600) | Built for screens, very legible at small sizes, tabular numbers for times and episode counts |
+
+Type scale (pt, line-height):
+
+| Style | Font | Size / LH | Use |
+|---|---|---|---|
+| `display` | Jakarta 800 | 32 / 38 | Hero title |
+| `h1` | Jakarta 700 | 24 / 30 | Screen titles |
+| `h2` | Jakarta 700 | 18 / 24 | Row headers |
+| `title` | Inter 600 | 15 / 20 | Card titles (max 2 lines) |
+| `body` | Inter 400 | 15 / 22 | Synopsis, settings |
+| `caption` | Inter 500 | 12 / 16 | Meta lines, timestamps |
+| `label` | Inter 600 | 11 / 14, +0.4 tracking, uppercase | Badges, chips |
+
+- Respect the system font scale up to 1.3×, so layouts must flex. Titles truncate with an ellipsis and never overflow.
+- Use `fontVariant: ['tabular-nums']` for times, progress and counts.
+
+### 6.3 Skeleton loading
+- **Every** screen that loads data shows a skeleton of its real layout on first load:
+  - hero block
+  - row header bar plus 3½ poster boxes, with the half box hinting that the row scrolls
+  - grid boxes
+  - list rows with thumbnail and two text lines
+- Skeletons use `card` with a `card-2` shimmer sweep (1.2 s, linear, Reanimated). With **Reduce Motion** on, they show a static pulse instead.
+- Skeleton boxes are exactly the final component's dimensions, so swapping in content causes no layout shift.
+- Reusable primitives in `mobile/src/components/skeleton/`: `SkeletonBox`, `SkeletonText` (n lines, last line at 60%), `PosterSkeleton`, `RowSkeleton`, `HeroSkeleton`, `ListItemSkeleton`.
+- Spinners appear only for actions the user started (e.g. resolving a mirror), never for loading content.
+- If data arrives in under 150 ms, skip the skeleton entirely to avoid a flash.
+
+### 6.4 UX principles (acceptance rules)
+1. **Content first.** Artwork carries the screen. Chrome is minimal, translucent over imagery, and solid on scroll.
+2. **One primary action per screen.** It's the most prominent button: Play on the hero and on Series detail, Resume in History.
+3. **Thumb-reachable.** Primary actions sit in the bottom half or the tab bar. Touch targets are ≥ 48 × 48 dp, with ≥ 8 dp between targets (Fitts's law).
+4. **Feedback within 100 ms.** Every press shows a pressed state (opacity or scale 0.97). Key actions get light haptics: add to My List, Play.
+5. **Never a dead end.** Every empty, error and offline state explains what happened and offers a next step.
+6. **Instant on return.** Show cached data immediately and refresh in the background (stale-while-revalidate). The user never waits twice for the same screen.
+7. **Progressive disclosure.** Hide secondary details (long synopsis, full metadata, server list) behind "More" or a sheet.
+8. **Consistency.** Cards, chips and buttons come from one component set, and nothing is styled one-off on a single screen.
+9. **Accessible.** Text contrast is ≥ 4.5:1 (≥ 3:1 for large text). Every icon button has an `accessibilityLabel`. Screen-reader order follows the visual order. Reduce Motion is respected.
+10. **Forgiving.** Destructive actions (clear history, remove from list) need a confirm, or a 5 s "Undo" snackbar.
+11. **Motion with purpose.** 200–300 ms ease-out for transitions. Shared-element style poster → detail transition where the platform supports it. No decorative animation that delays content.
+
+## 7. Non-functional requirements
 
 | Area | Target |
 |---|---|
-| Cold start to interactive Home | < 2.5 s on a mid-range Android device (cache warm on the server) |
+| Cold start to the Home skeleton | < 1 s |
+| Cold start to Home content | < 2.5 s on a mid-range Android device (cache warm on the server) |
 | Tap episode to first frame | < 4 s on HLS mirrors |
-| Scrolling | 60 fps on the latest-episode grid of 200+ items |
+| Scrolling | 60 fps on Home rows and on 200+ item grids |
+| Layout shift | None when content replaces skeletons |
 | Crash-free sessions | ≥ 99% |
 | Minimum OS | Android 8 (API 26), iOS 15 |
-| Accessibility | Labelled touch targets ≥ 44 pt; scales with the system font size |
+| Accessibility | WCAG 2.2 AA contrast; 48 dp targets; supports font scale up to 1.3× |
 
-## 7. Data model (local)
+## 8. Data model (local)
 
-Same shape as the web `src/storage.js`, so a later sync feature can merge the two.
+Bookmarks and history use the same shape as the web `src/storage.js`, so a later sync feature can merge them.
 
 ```ts
 type Bookmark = { slug: string; title: string; poster: string; addedAt: number };
 type HistoryItem = {
   episodeSlug: string; seriesSlug: string; title: string; episode: string;
-  poster: string; position: number; duration: number; updatedAt: number;
+  poster: string; genres?: string[]; position: number; duration: number; updatedAt: number;
 };
-// keys: anistream.bookmarks.v1, anistream.history.v1
+type Settings = {
+  autoplayNext: boolean; resume: boolean; serverOrder: string[];
+  language: 'id' | 'en' | 'system'; theme: 'dark' | 'amoled'; apiUrl?: string;
+  favoriteGenres: string[]; onboarded: boolean;
+};
+// keys: anistream.bookmarks.v1, anistream.history.v1, anistream.settings.v1, anistream.searches.v1
 ```
 
-## 8. Milestones
+## 9. Milestones
 
 Each milestone is one or more PRs (see AGENTS.md → Git workflow).
 
 | # | Milestone | Done when |
 |---|---|---|
-| M0 | Docs: this PRD, AGENTS.md, the project skill | Merged |
-| M1 | Scaffold `mobile/` (Expo + TS + Router + Query), theme, tab shell, typed API client | App boots on Android showing 4 empty tabs |
-| M2 | Home, Browse, Search with real data | All three render live data and paginate |
-| M3 | Series detail and local storage (watchlist, history) | Watchlist persists across restarts |
-| M4 | Watch screen: expo-video + WebView mirrors, fallback, resume, fullscreen | HLS and iframe episodes both play; resume works |
-| M5 | Polish: errors/offline, deep links, settings, icons/splash, Android APK build | Installable APK reviewed on a real phone |
+| M0 | Docs, CI/CD, release pipeline | ✅ Merged |
+| M1 | **Foundation**: theme tokens, fonts, typography components, skeleton primitives, five-tab shell, typed API client + Query, i18n scaffold | App boots to 5 tabs. A screen showing every type style and skeleton renders |
+| M2 | **Home**: hero, Continue Watching, rows, skeletons, pull to refresh | Home shows live data; cold start shows the skeleton in under 1 s |
+| M3 | **Series detail + local storage**: My List, history writes | Watchlist persists across restarts |
+| M4 | **Watch**: expo-video + WebView mirrors, controls, fallback, resume, Up next | HLS and iframe episodes both play; resume works |
+| M5 | **Discover, Search, Genre results** + `/api/genres` | You can find any show by genre or name in 3 taps or fewer |
+| M6 | **New + History + My Space** (+ schedule spike) | All five tabs complete |
+| M7 | **Settings, onboarding, offline/error states, deep links, icon/splash** | v0.x APK released and reviewed on a real phone |
 
-## 9. Future (v2+)
-- Push notifications for new episodes of watchlisted shows (server cron + Expo push).
+## 10. Future (v2+)
+- Push notifications for new episodes of shows in My List (server cron + Expo push).
 - Offline downloads (HLS → local MP4, which depends on the mirror).
-- Account sync between web and mobile.
+- Accounts and multiple profiles, with sync between web and mobile.
+- Chromecast / AirPlay.
 - Persistent server deployment: a systemd unit, then a public host with auth or rate limiting.
 
-## 10. Risks and open questions
+## 11. Risks and open questions
 
 | Risk / question | Impact | Mitigation |
 |---|---|---|
 | samehadaku markup or domain changes | Data breaks | All parsing stays in `server/scraper.js`; fix it once on the server |
-| Mirrors are flaky or disappear | Playback fails | Server switcher + automatic fallback; iframe as a last resort |
+| Mirrors are flaky or disappear | Playback fails | Server picker + automatic fallback; iframe as a last resort |
+| Hero and backdrop artwork is low-resolution (posters are about 400×560) | A blurry hero | Use the poster with a blurred, scaled backdrop and gradient. Check whether the site has larger images (strip the `resize` param) |
+| No genre list or schedule endpoint yet | Discover and New are blocked | Build `/api/genres` in M5 and spike `/api/schedule` in M6. Fall back to a hardcoded genre list |
 | API is only reachable on the tailnet | App doesn't work off-tailnet | Acceptable for the review phase; deciding on public hosting is open |
 | Can `expo-video` play the CDN stream directly with a `Referer` header? | Cuts load on the proxy | Spike during M4; keep the proxy as the default |
 | Blogger WebView may show ads or redirects | Poor experience | Block navigation via `onShouldStartLoadWithRequest`; allowlist hosts |
 | Content rights | Store rejection, takedown | Sideload only; the app hosts nothing. Revisit before any public release |
-| Server process doesn't survive a reboot | Downtime | Add a systemd unit (tracked separately) |
