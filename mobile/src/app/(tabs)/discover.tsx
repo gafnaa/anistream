@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { router } from 'expo-router';
 import { View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +17,7 @@ import { t } from '@/i18n';
 const palette = Object.values(genreGradients);
 export default function Discover() {
   const genres = useGenres();
+  const [allGenres, setAllGenres] = useState(false);
   const home = useHome();
   const artwork = [...(home.data?.trending ?? []), ...(home.data?.ongoing ?? [])];
   const skeleton = useDelayedSkeleton(genres.isPending);
@@ -37,7 +39,7 @@ export default function Discover() {
           {Array.from({ length: 10 }, (_, i) => <SkeletonBox key={i} width="48%" height={118} />)}
         </View>
       </SkeletonMotionControl>}</View> : <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-        {[...(genres.data ?? [])].sort((a, b) => { const order = ['action', 'fantasy', 'romance', 'comedy', 'sports', 'supernatural']; return (order.includes(a.slug) ? order.indexOf(a.slug) : 99) - (order.includes(b.slug) ? order.indexOf(b.slug) : 99); }).map((genre, i) => <Button key={genre.slug} variant="ghost"
+        {[...(genres.data ?? [])].sort((a, b) => { const order = ['action', 'fantasy', 'romance', 'comedy', 'sports', 'supernatural']; return (order.includes(a.slug) ? order.indexOf(a.slug) : 99) - (order.includes(b.slug) ? order.indexOf(b.slug) : 99); }).slice(0, allGenres ? undefined : 6).map((genre, i) => <Button key={genre.slug} variant="ghost"
           accessibilityLabel={genre.name} className="p-0 active:opacity-70"
           style={{ width: '48%', height: 118, overflow: 'hidden', borderRadius: 10 }}
           onPress={() => router.push({ pathname: '/genre/[slug]', params: { slug: genre.slug } })}>
@@ -52,5 +54,6 @@ export default function Discover() {
       </View>}
     </View>
     <GenreSuggestions genres={genres.data} />
+    <Button variant="outline" onPress={() => setAllGenres(value => !value)} accessibilityState={{ expanded: allGenres }}><Text variant="caption">{t(allGenres ? 'less' : 'browseAllGenres')}</Text></Button>
   </Screen>;
 }
