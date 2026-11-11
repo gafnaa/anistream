@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useSyncExternalStore } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 
 export type Bookmark = { slug: string; title: string; poster: string; addedAt: number };
 export type HistoryItem = {
@@ -64,4 +64,19 @@ export function removeHistory(slug: string) {
 }
 export function addHistory(item: HistoryItem) {
   return history.update(current => [item, ...current.filter(value => value.episodeSlug !== item.episodeSlug)].slice(0, 60));
+}
+
+export function useSeriesProgress(seriesSlug: string) {
+  const items = useHistory();
+  return useMemo(() => {
+    const entries = items.filter(item => item.seriesSlug === seriesSlug)
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+    const byEpisode = new Map<string, { entry: HistoryItem; progress: number }>();
+    for (const entry of entries) {
+      if (byEpisode.has(entry.episodeSlug)) continue;
+      const progress = entry.duration > 0 ? Math.min(1, Math.max(0, entry.position / entry.duration)) : 0;
+      byEpisode.set(entry.episodeSlug, { entry, progress });
+    }
+    return { lastWatched: entries[0], byEpisode };
+  }, [items, seriesSlug]);
 }

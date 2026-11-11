@@ -7,13 +7,13 @@ import { Text } from '@/components/Text';
 import { t } from '@/i18n';
 
 const MotionContext = createContext(true);
-export function SkeletonMotionControl({ children }: PropsWithChildren) {
+export function SkeletonMotionControl({ children, floatingControl = false }: PropsWithChildren<{ floatingControl?: boolean }>) {
   const [running, setRunning] = useState(true);
   const reducedMotion = useReducedMotion();
   if (reducedMotion) return <MotionContext.Provider value={false}>{children}</MotionContext.Provider>;
   return <MotionContext.Provider value={running}>
     <Pressable accessibilityRole="button" onPress={() => setRunning(value => !value)}
-      style={({ pressed }) => [styles.control, { opacity: pressed ? 0.7 : 1 }]}>
+      style={({ pressed }) => [styles.control, floatingControl && { position: 'absolute', top: -72, right: 0, zIndex: 1 }, { opacity: pressed ? 0.7 : 1 }]}>
       <Text variant="caption">{t(running ? 'pause' : 'resume')}</Text>
     </Pressable>
     {children}
