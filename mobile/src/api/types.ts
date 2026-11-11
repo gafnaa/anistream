@@ -25,3 +25,5 @@ export type EpisodeResponse = {
   raw: { label: string; url: string; embed: string | null }[];
 };
 export type BrowseParams = { status?: string; type?: string; order?: string; genre?: string; page?: number };
+
+export type ResolvedSource = { type: 'hls' | 'mp4' | 'iframe'; url: string; playUrl?: string };

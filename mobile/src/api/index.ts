@@ -32,3 +32,8 @@ export function useBrowse(params: BrowseParams = {}) {
     queryFn: ({ pageParam, signal }) => apiGet<PageResponse>('/api/browse', { ...params, page: pageParam }, signal),
     getNextPageParam: last => last.hasNext ? last.page + 1 : undefined });
 }
+
+export function useResolvedSource(mirror: string, attempt: number) {
+  return useQuery({ queryKey: ['resolve', mirror, attempt], enabled: !!mirror, retry: false,
+    queryFn: ({ signal }) => apiGet<import('./types').ResolvedSource>('/api/resolve', { mirror }, signal) });
+}

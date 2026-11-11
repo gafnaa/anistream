@@ -3,7 +3,7 @@ import { FlatList, PixelRatio, Pressable, ScrollView, Share, StyleSheet, View } 
 import { RemovalDialog } from './RemovalDialog';
 import { Toggle } from './ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
-import { Separator } from './ui/separator';
+import { EpisodeRow } from './EpisodeRow';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -63,7 +63,7 @@ function Synopsis({ text }: { text: string | null }) {
 export function SeriesDetail({ series }: { series: SeriesResponse }) {
   const insets = useSafeAreaInsets();
   const saved = useIsBookmarked(series.slug);
-  const { lastWatched, byEpisode } = useSeriesProgress(series.slug);
+  const { lastWatched } = useSeriesProgress(series.slug);
   const [descending, setDescending] = useState(sessionDescending);
   const [range, setRange] = useState<number | null>(null);
   const [confirmRemoval, setConfirmRemoval] = useState(false);
@@ -152,33 +152,7 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
       ListEmptyComponent={<View style={{ padding: 24, gap: 16 }}>
         <Text muted>{t('noEpisodes')}</Text><ActionButton label={t('backHome')} onPress={() => router.replace('/')} />
       </View>}
-      renderItem={({ item }) => {
-        const progress = byEpisode.get(item.slug)?.progress ?? 0;
-        const watched = progress >= 0.9;
-        return <Pressable accessibilityRole="button"
-          accessibilityLabel={`${t('episodeLabel')} ${item.number ?? ''}, ${item.title}${progress > 0 ? `, ${t(watched ? 'watched' : 'inProgress')}` : ''}`}
-          onPress={() => router.push({ pathname: '/watch/[slug]', params: { slug: item.slug } })}
-          style={({ pressed }) => ({ marginHorizontal: 24, paddingVertical: 16, gap: 8,
-            opacity: pressed ? 0.65 : 1 })}>
-          <Separator />
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ width: 48, minHeight: 48, borderRadius: radius.chip, backgroundColor: colors.card, justifyContent: 'center', alignItems: 'center' }}>
-              <Text variant="title" tabular>{item.number ?? '▶'}</Text>
-            </View>
-            <View style={{ flex: 1, gap: 4 }}>
-              <Text variant="title" muted={watched}>{episodeDisplayTitle(item.title, series.title)}</Text>
-              {!!item.date && <Text variant="caption" muted>{item.date}</Text>}
-              {progress > 0 && <Text variant="caption">{watched ? '✓ ' : ''}{t(watched ? 'watched' : 'inProgress')}</Text>}
-            </View>
-            <Ionicons name={watched ? 'checkmark-circle-outline' : 'play-circle-outline'} size={24} color={colors.text} />
-          </View>
-          {progress > 0 && !watched && <View accessibilityRole="progressbar"
-            accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }}
-            style={{ height: 4, backgroundColor: colors.line, borderRadius: 2 }}>
-            <View style={{ height: 4, width: `${progress * 100}%`, backgroundColor: colors.brand, borderRadius: 2 }} />
-          </View>}
-        </Pressable>;
-      }} />
+      renderItem={({ item }) => <View style={{ marginHorizontal: 24 }}><EpisodeRow episode={item} seriesSlug={series.slug} seriesTitle={series.title} /></View>} />
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: insets.top + 8, paddingBottom: 8, paddingHorizontal: 16, zIndex: 10, backgroundColor: scrolled ? colors.bg : 'transparent', flexDirection: 'row', justifyContent: 'space-between' }}>
       <SeriesBackButton />
       <IconButton label={t('share')} icon="share-outline" onPress={() => {
@@ -220,13 +194,4 @@ function rangeLabel(episodes: SeriesEpisode[], index: number) {
   const from = first?.number ?? String(index * 50 + 1);
   const to = last?.number ?? String(Math.min(episodes.length, (index + 1) * 50));
   return `${from}–${to}`;
-}
-
-/** "One Piece Episode 1086 Subtitle Indonesia" → "Episode 1086". */
-function episodeDisplayTitle(title: string, seriesTitle: string) {
-  let cleaned = title.replace(/\s*subtitle indonesia\s*$/i, '').trim();
-  if (cleaned.toLowerCase().startsWith(seriesTitle.toLowerCase())) {
-    cleaned = cleaned.slice(seriesTitle.length).trim();
-  }
-  return cleaned || title;
 }

@@ -32,7 +32,7 @@ export default function RootLayout() {
   if (!loaded) return null;
   return <QueryClientProvider client={queryClient}>
     <StatusBar style="light" />
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg },
+    <Stack screenOptions={{ headerShown: false, orientation: 'portrait', contentStyle: { backgroundColor: colors.bg },
       headerStyle: { backgroundColor: colors.surface }, headerTintColor: colors.text }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="+not-found" />

@@ -8,6 +8,7 @@ export type HistoryItem = {
 };
 function createStore<T>(key: string, validate: (value: unknown) => value is T) {
   let items: T[] = [];
+  let hydrated = false;
   const listeners = new Set<() => void>();
   let pending = Promise.resolve();
   const ready = AsyncStorage.getItem(key).then(raw => {
@@ -15,9 +16,15 @@ function createStore<T>(key: string, validate: (value: unknown) => value is T) {
       const value: unknown = JSON.parse(raw);
       if (Array.isArray(value)) items = value.filter(validate);
     }
+  }).catch(() => undefined).finally(() => {
+    hydrated = true;
     listeners.forEach(listener => listener());
-  }).catch(() => undefined);
+  });
   return {
+    useHydrated: () => useSyncExternalStore(listener => {
+      listeners.add(listener);
+      return () => { listeners.delete(listener); };
+    }, () => hydrated, () => false),
     useItems: () => useSyncExternalStore(listener => {
       listeners.add(listener);
       return () => { listeners.delete(listener); };
@@ -51,6 +58,7 @@ const bookmarks = createStore<Bookmark>('anistream.bookmarks.v1', isBookmark);
 const history = createStore<HistoryItem>('anistream.history.v1', isHistory);
 export const useBookmarks = bookmarks.useItems;
 export const useHistory = history.useItems;
+export const useHistoryHydrated = history.useHydrated;
 export function useIsBookmarked(slug: string) {
   return useBookmarks().some(item => item.slug === slug);
 }
