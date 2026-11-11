@@ -1,11 +1,14 @@
+import { AmbientBackground } from '@/components/AmbientBackground';
 import { useMemo, useState } from 'react';
 import { Animated, Pressable, RefreshControl, View } from 'react-native';
 import { router } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHome, useLatest, useBrowse } from '@/api';
 import type { TrendingCard } from '@/api/types';
 import { Text } from '@/components/Text';
+import { RecoveryState } from '@/components/RecoveryState';
+import { Alert } from '@/components/ui/alert';
 import { HeroBanner, useHeroHeight } from '@/components/HeroBanner';
 import { Row } from '@/components/Row';
 import { PosterCard } from '@/components/PosterCard';
@@ -50,17 +53,15 @@ export default function Home() {
     setRefreshing(false);
   };
   return <View style={{ flex: 1, backgroundColor: colors.bg }}>
-    <Animated.ScrollView scrollEventThrottle={16} onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scroll } } }], { useNativeDriver: false })}
+    <AmbientBackground /><Animated.ScrollView scrollEventThrottle={16} onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scroll } } }], { useNativeDriver: false })}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.brand} progressViewOffset={insets.top + 56} />}
       contentContainerStyle={{ paddingBottom: bottom + 24, gap: 24 }}>
-      {home.isError && !home.data ? <View style={{ minHeight: heroHeight, padding: 24, paddingTop: insets.top + 100, gap: 16, justifyContent: 'center' }}>
-        <Text variant="h1">{t('homeError')}</Text><Text muted>{t('homeErrorBody')}</Text>
-        <ActionButton primary label={t('retry')} onPress={() => void refresh()} />
+      {home.isError && !home.data ? <View style={{ minHeight: heroHeight, paddingTop: insets.top + 56 }}>
+        <RecoveryState title={t('offlineTitle')} description={t('homeErrorBody')} label={t('retry')} action={() => void refresh()}
+          secondaryLabel={t('myList')} secondary={() => router.push('/me')} />
       </View> : home.data ? <HeroBanner items={heroItems} />
         : <View style={{ height: heroHeight }}>{skeleton && <View style={{ height: heroHeight }}><HeroSkeleton height={heroHeight} /></View>}</View>}
-      {home.data && home.isError && <View accessibilityRole="alert" style={{ paddingHorizontal: 16, paddingVertical: 4, gap: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface }}>
-        <Text variant="caption" style={{ flex: 1 }}>{t('cachedError')}</Text><ActionButton label={t('retry')} onPress={() => void refresh()} />
-      </View>}
+      {home.data && home.isError && <View style={{ paddingHorizontal: 24 }}><Alert message={t('cachedError')} /><ActionButton label={t('retry')} onPress={() => void refresh()} /></View>}
       {history.length > 0 && <Row title={t('continueWatching')} items={history} landscape itemKey={item => item.episodeSlug} renderItem={item => <ContinueCard item={item} />} />}
       {showTrendingRow && <Row title={t('trending')} items={home.data?.trending ?? []} loading={home.isPending} error={home.isError}
         retry={() => void home.refetch()} itemKey={item => item.slug} renderItem={item => <PosterCard item={item} />} />}
@@ -79,7 +80,7 @@ export default function Home() {
         <Text variant="h2">AniStream</Text>
         <Pressable accessibilityRole="button" accessibilityLabel={t('search')} onPress={() => router.push('/search')}
           style={({ pressed }) => ({ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
-          <Ionicons name="search-outline" size={24} color={colors.text} />
+          <Icon name="search-outline" size={24} color={colors.text} />
         </Pressable>
       </View>
     </View>

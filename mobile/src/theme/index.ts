@@ -3,10 +3,11 @@ import { brandRamp } from './palette';
 export { brandRamp, tones, gradients, genreGradients } from './palette';
 
 export const colors = {
-  ...brandRamp, elevated: '#242630', overlay: '#2C2F3A', glass: 'rgba(19,21,28,0.92)',
+  ...brandRamp, elevated: '#242630', overlay: '#2C2F3A', glass: '#13151CEB',
   bg: '#0B0D12', surface: '#13151C', card: '#1A1C24', 'card-2': '#23262F',
   line: '#2E323D', text: '#EEF1F7', 'text-muted': '#9299AD', brand: '#F43F5E',
   'brand-strong': '#E11D48', 'brand-2': '#FB923C', accent: '#FDA4AF',
+  primary: '#E11D48', orange: '#FB923C', muted: '#9299AD', cyan: '#22D3EE', amber: '#FBBF24', green: '#4ADE80',
 } as const;
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 export const radius = { chip: 6, card: 10, sheet: 14 } as const;
@@ -26,3 +27,5 @@ export const typography = {
 } as const satisfies Record<string, TextStyle>;
 export type TextVariant = keyof typeof typography;
 export type ColorToken = keyof typeof colors;
+
+export const backgroundGradient = ['#26172C', '#10131C', '#0B0D12', '#102535'] as const;

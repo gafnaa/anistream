@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'rea
 import { AppState, Platform, ScrollView, StyleSheet, useWindowDimensions, View, type PointerEvent } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import { router, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Animated, { Extrapolation, interpolate, interpolateColor, runOnJS, useAnimatedScrollHandler, useAnimatedStyle, useReducedMotion, useSharedValue, type SharedValue } from 'react-native-reanimated';
@@ -10,7 +10,6 @@ import { useSeries } from '@/api';
 import type { TrendingCard } from '@/api/types';
 import { useIsBookmarked, toggleBookmark } from '@/storage';
 import { Text } from './Text';
-import { Chip } from './Chip';
 import { Button } from './ui/button';
 import { Text as ButtonText } from './ui/text';
 import { RemovalDialog } from './RemovalDialog';
@@ -18,7 +17,7 @@ import { colors } from '@/theme';
 import { t } from '@/i18n';
 
 export function useHeroHeight() {
-  return Math.round(useWindowDimensions().height * 0.67);
+  return Math.round(useWindowDimensions().height * 0.605);
 }
 
 function heroImage(source: string | null) {
@@ -33,13 +32,14 @@ function Slide({ item, index, count, width, height, offset, reducedMotion }: {
   item: TrendingCard; index: number; count: number; width: number; height: number;
   offset: SharedValue<number>; reducedMotion: boolean;
 }) {
+  const series = useSeries(item.slug);
   const imageStyle = useAnimatedStyle(() => ({
     transform: [{ scale: reducedMotion ? 1 : interpolate(offset.value / width,
       [index - 1, index, index + 1], [1.06, 1.015, 1.06], Extrapolation.CLAMP) }],
   }));
   return <View style={{ width, height, overflow: 'hidden' }}>
     <Animated.View style={[StyleSheet.absoluteFill, imageStyle]}>
-      <Image source={heroImage(item.image)} contentFit="cover" contentPosition={{ top: '10%', left: '50%' }}
+      <Image source={heroImage(series.data?.banner ?? item.image)} contentFit="cover" contentPosition={{ top: '10%', left: '50%' }}
         priority={index === 0 ? 'high' : 'normal'} transition={0}
         accessibilityLabel={`${index + 1} / ${count}: ${item.title}`}
         style={StyleSheet.absoluteFill} />
@@ -189,41 +189,30 @@ export function HeroBanner({ items }: { items: TrendingCard[] }) {
       locations={[0, 0.35, 1]} style={styles.bottomScrim} />
     <View pointerEvents="box-none" style={styles.content}>
       <Text variant="display" numberOfLines={2} accessibilityRole="header">{item.title}</Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, minHeight: 24 }}>
-        {series.data?.genres.slice(0, 3).map(genre => <Chip key={genre} label={genre} tone="cyan" />)}
-      </View>
+      <Text variant="caption">{[series.data?.released, ...(series.data?.genres.slice(0, 2) ?? []), series.data && `${series.data.episodes.length} ${t('episodesLabel')}`].filter(Boolean).join('   ')}</Text>
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <Button onPress={() => {
           void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
           router.push({ pathname: episode ? '/watch/[slug]' : '/series/[slug]', params: { slug: episode?.slug ?? item.slug } });
-        }}><ButtonText>▶ {t('play')}</ButtonText></Button>
+        }}><ButtonText>{t('play')}</ButtonText></Button>
         <Button variant="secondary" onPress={() => saved ? setConfirmRemoval(true) : toggle()}>
           <ButtonText>{saved ? '✓' : '+'} {t('myList')}</ButtonText>
         </Button>
       </View>
       {storageError && <Text variant="caption" accessibilityRole="alert">{t('storageError')}</Text>}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
         <View accessible={false} aria-hidden importantForAccessibility="no-hide-descendants" style={{ flexDirection: 'row', gap: 6 }}>
           {titles.map((title, i) => <Dot key={title.slug} index={i} offset={offset} width={width} reducedMotion={reducedMotion} active={i === current} />)}
         </View>
-        {titles.length > 1 && <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Button size="icon" variant="ghost" accessibilityLabel={t('previousTitle')} onPress={() => {
-            move(current - 1);
-            release();
-          }}>
-            <Ionicons name="chevron-back" color={colors.text} size={20} />
-          </Button>
-          {!reducedMotion && <Button size="icon" variant="ghost" accessibilityLabel={t(paused ? 'resumeHero' : 'pauseHero')}
-            accessibilityState={{ selected: paused }} onPress={() => setPaused(value => !value)}>
-            <Ionicons name={paused ? 'play' : 'pause'} color={colors.text} size={18} />
-          </Button>}
-          <Button size="icon" variant="ghost" accessibilityLabel={t('nextTitle')} onPress={() => {
-            move(current + 1);
-            release();
-          }}>
-            <Ionicons name="chevron-forward" color={colors.text} size={20} />
-          </Button>
-        </View>}
+        {titles.length > 1 && <>
+          <Button size="icon" variant="ghost" accessibilityLabel={t('previousTitle')} style={{ position: 'absolute', left: 0, bottom: -18 }} onPress={() => { move(current - 1); release(); }}><Icon name="chevron-back" size={24} color={colors['text-muted']} /></Button>
+          <Button size="icon" variant="ghost" accessibilityLabel={t('nextTitle')} style={{ position: 'absolute', right: 0, bottom: -18 }} onPress={() => { move(current + 1); release(); }}><Icon name="chevron-forward" size={24} color={colors['text-muted']} /></Button>
+        </>}
+        {titles.length > 1 && !reducedMotion && <Button size="icon" variant="ghost" accessibilityLabel={t(paused ? 'resumeHero' : 'pauseHero')}
+          style={{ position: 'absolute', right: 48, bottom: -18 }} accessibilityState={{ selected: paused }} onPress={() => setPaused(value => !value)}>
+          <Icon name={paused ? 'play' : 'pause'} color={colors.text} size={24} />
+        </Button>}
+
       </View>
     </View>
     <RemovalDialog open={confirmRemoval} onOpenChange={setConfirmRemoval} title={t('removeBookmark')}
@@ -234,5 +223,5 @@ export function HeroBanner({ items }: { items: TrendingCard[] }) {
 const styles = StyleSheet.create({
   topScrim: { position: 'absolute', top: 0, left: 0, right: 0, height: 100 },
   bottomScrim: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 320 },
-  content: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 24, paddingBottom: 8, gap: 12 },
+  content: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 24, paddingBottom: 12, gap: 16 },
 });

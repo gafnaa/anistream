@@ -6,9 +6,9 @@ import { Platform } from 'react-native';
 
 const toggleVariants = cva(
   cn(
-    'active:bg-muted group flex flex-row items-center justify-center gap-2 rounded-md',
+    'active:bg-muted group flex flex-row items-center justify-center gap-2 rounded-sm',
     Platform.select({
-      web: 'hover:bg-muted hover:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive inline-flex cursor-default whitespace-nowrap outline-none transition-[color,box-shadow] focus-visible:ring-[3px] disabled:pointer-events-none [&_svg]:pointer-events-none',
+      web: 'hover:bg-muted hover:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive inline-flex cursor-default whitespace-nowrap outline-none transition-[color,box-shadow] focus-visible:ring-2 disabled:pointer-events-none [&_svg]:pointer-events-none',
     })
   ),
   {
@@ -53,8 +53,8 @@ function Toggle({
       <TogglePrimitive.Root
         className={cn(
           toggleVariants({ variant, size }),
-          props.disabled && 'opacity-50',
-          props.pressed && 'bg-accent',
+          props.disabled && 'opacity-40',
+          props.pressed && 'bg-primary/10 border border-ring',
           className
         )}
         {...props}

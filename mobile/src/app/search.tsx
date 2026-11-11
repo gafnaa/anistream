@@ -1,8 +1,13 @@
+import { BrowseNavigation } from '@/components/BrowseNavigation';
+import { AmbientBackground } from '@/components/AmbientBackground';
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
+import { router } from 'expo-router';
+import { Row } from '@/components/Row';
+import { PosterCard } from '@/components/PosterCard';
 import { TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useGenres, useSearch } from '@/api';
+import Icon from '@/components/Icon';
+import { useBrowse, useGenres, useSearch } from '@/api';
 import { PosterGrid } from '@/components/PosterGrid';
 import { SeriesBackButton } from '@/components/SeriesDetail';
 import { GenreSuggestions } from '@/components/CatalogueControls';
@@ -10,6 +15,7 @@ import { Text } from '@/components/Text';
 import { Button } from '@/components/ui/button';
 import { RemovalDialog } from '@/components/RemovalDialog';
 import { clearSearches, removeSearch, saveSearch, useRecentSearches } from '@/storage';
+import { Search as SearchIcon } from 'lucide-react-native';
 import { colors, fonts } from '@/theme';
 import { t } from '@/i18n';
 
@@ -23,6 +29,7 @@ export default function Search() {
   const recent = useRecentSearches();
   const genres = useGenres();
   const query = useSearch(debounced);
+  const recommendations = useBrowse({ order: 'popular' });
   const persist = (operation: Promise<void>) => { setStorageError(false); void operation.catch(() => setStorageError(true)); };
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(input.trim()), 300);
@@ -35,19 +42,19 @@ export default function Search() {
   }, [debounced, query.isSuccess]);
   const hasQuery = !!input.trim();
   return <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.bg }}>
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 8 }}>
+    <AmbientBackground /><View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 8 }}>
       <SeriesBackButton />
-      <View style={{ flex: 1, minHeight: 52, borderRadius: 10, borderWidth: 1, borderColor: focused ? colors.brand : colors.line,
+      <View style={{ flex: 1, minHeight: 48, borderRadius: 6, borderWidth: focused ? 2 : 1, borderColor: focused ? colors.brand : colors.line,
         backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', paddingLeft: 12 }}>
-        <Ionicons name="search-outline" size={20} color={colors['text-muted']} />
+        <Icon name="search-outline" size={24} color={colors['text-muted']} />
         <TextInput ref={field} value={input} onChangeText={setInput} autoFocus autoCorrect={false} autoCapitalize="none"
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} className="web:outline-none"
           accessibilityLabel={t('searchHint')} placeholder={t('searchHint')} placeholderTextColor={colors['text-muted']}
           returnKeyType="search" onSubmitEditing={() => { if (input.trim()) persist(saveSearch(input)); }}
-          style={{ flex: 1, minWidth: 0, minHeight: 52, paddingHorizontal: 12, color: colors.text, fontFamily: fonts.inter400, fontSize: 15 }} />
+          style={{ flex: 1, minWidth: 0, minHeight: 48, paddingHorizontal: 12, color: colors.text, fontFamily: fonts.inter400, fontSize: 15 }} />
         <Button variant="ghost" size="icon" accessibilityLabel={t('clearQuery')} disabled={!input}
           onPress={() => { setInput(''); field.current?.focus(); }}>
-          <Ionicons name="close" size={20} color={colors.text} />
+          <Icon name="close" size={24} color={colors.text} />
         </Button>
       </View>
     </View>
@@ -57,11 +64,15 @@ export default function Search() {
       retry={() => void query.refetch()} fetchingNext={query.isFetchingNextPage}
       next={() => { if (hasQuery && input.trim() === debounced && query.hasNextPage && !query.isFetching && !query.isError) void query.fetchNextPage(); }}
       header={hasQuery ? <View style={{ paddingTop: 16, paddingBottom: 24, gap: 8 }}>
-        <Text variant="h2" accessibilityRole="header">{t('searchResults')}</Text><Text muted variant="caption">{input.trim()}</Text>
+        <Text variant="h2" accessibilityRole="header">{t('searchResults')} “{input.trim()}”</Text><Text muted variant="caption">{query.data?.pages.flatMap(page => page.items).length ?? 0} {t('titlesFound')}</Text>
       </View> : undefined}
-      empty={hasQuery ? <View style={{ paddingVertical: 24, gap: 24 }}>
-        <View style={{ gap: 8 }}><Text variant="h2">{t('noResults')}</Text><Text muted>{t('noResultsHint')}</Text></View>
+      footer={hasQuery ? <View style={{ marginHorizontal: -24, paddingTop: 24 }}><Row title={t('youMayLike')}
+        items={recommendations.data?.pages.flatMap(page => page.items).slice(0, 6) ?? []} itemKey={item => item.slug}
+        renderItem={item => <PosterCard item={item} />} /></View> : undefined}
+      empty={hasQuery ? <View style={{ paddingVertical: 100, gap: 24, alignItems: 'center' }}>
+        <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' }}><SearchIcon size={36} color={colors['text-muted']} /></View><View style={{ gap: 8 }}><Text variant="h1" style={{ textAlign: 'center' }}>{t('noResults')}</Text><Text muted>{t('noResultsHint')}</Text></View>
         <GenreSuggestions genres={genres.data} />
+        <Button variant="outline" onPress={() => router.push('/discover')}><Text variant="caption">{t('browseAllGenres')}</Text></Button>
       </View> : <View style={{ paddingTop: 24, gap: 32 }}>
         <View style={{ gap: 8 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -71,15 +82,16 @@ export default function Search() {
           {recent.length === 0 ? <Text muted>{t('noSearches')}</Text> : recent.map(value => <View key={value}
             style={{ flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: colors.line }}>
             <Button variant="ghost" style={{ flex: 1, justifyContent: 'flex-start', paddingHorizontal: 0, gap: 12 }} onPress={() => setInput(value)}>
-              <Ionicons name="time-outline" size={18} color={colors['text-muted']} /><Text numberOfLines={1} style={{ flex: 1 }}>{value}</Text>
+              <Icon name="time-outline" size={24} color={colors['text-muted']} /><Text numberOfLines={1} style={{ flex: 1 }}>{value}</Text>
             </Button>
             <Button variant="ghost" size="icon" accessibilityLabel={`${t('removeSearch')} ${value}`} onPress={() => setRemoval(value)}>
-              <Ionicons name="close" size={18} color={colors['text-muted']} />
+              <Icon name="close" size={24} color={colors['text-muted']} />
             </Button>
           </View>)}
         </View>
         <GenreSuggestions genres={genres.data} />
       </View>} />
+    <BrowseNavigation />
     <RemovalDialog open={removal !== null} onOpenChange={open => { if (!open) setRemoval(null); }}
       title={t(removal ? 'removeSearch' : 'clearAll')} description={removal || t('clearSearchesHint')} error={storageError}
       onRemove={() => {

@@ -1,6 +1,7 @@
 import '../../global.css';
 import { PortalHost } from '@rn-primitives/portal';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -12,7 +13,6 @@ import { PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sa
 import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
 import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
 import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createQueryClient } from '@/api';
 import { colors } from '@/theme';
@@ -21,15 +21,20 @@ import { t } from '@/i18n';
 void SplashScreen.preventAutoHideAsync();
 void SystemUI.setBackgroundColorAsync(colors.bg);
 
+const subscribeHydration = () => () => undefined;
+const clientHydrated = () => true;
+const serverHydrated = () => Platform.OS !== 'web';
+
 export default function RootLayout() {
   const [queryClient] = useState(createQueryClient);
+  const hydrated = useSyncExternalStore(subscribeHydration, clientHydrated, serverHydrated);
   const [loaded, error] = useFonts({ PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold,
-    PlusJakartaSans_800ExtraBold, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, ...Ionicons.font });
+    PlusJakartaSans_800ExtraBold, Inter_400Regular, Inter_500Medium, Inter_600SemiBold });
   useEffect(() => {
     if (loaded || error) void SplashScreen.hideAsync();
   }, [loaded, error]);
   if (error) throw error;
-  if (!loaded) return null;
+  if (!loaded || !hydrated) return null;
   return <QueryClientProvider client={queryClient}>
     <StatusBar style="light" />
     <Stack screenOptions={{ headerShown: false, orientation: 'portrait', contentStyle: { backgroundColor: colors.bg },
