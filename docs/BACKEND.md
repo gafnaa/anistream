@@ -82,6 +82,7 @@ If a stream fails, the player automatically hops to the next mirror.
 |---|---|
 | `GET /api/home` | `{ latest[], ongoing[], trending[] }` |
 | `GET /api/latest?page=` | Latest episode releases |
+| `GET /api/schedule` | Inferred weekly release slots in Asia/Jakarta; cached 30 minutes |
 | `GET /api/browse?status=&type=&order=&genre=&page=` | Catalogue |
 | `GET /api/genres` | `[{ slug, name, count? }]` from the catalogue filter; cached 24 hours |
 | `GET /api/search?q=&page=` | Search results |
@@ -133,3 +134,30 @@ The six-second budget includes search, episode discovery, and mirror resolution.
 - Mirrors are flaky by nature — that's the site's infrastructure, not this app.
   The server switcher and auto-fallback exist for exactly this reason.
 - The mobile app (`mobile/`) reuses this API rather than porting the scraper: the HLS proxy has to stay server-side.
+
+## Inferred release schedule
+
+`GET /api/schedule` returns:
+
+```js
+{ timezone: 'Asia/Jakarta', generatedAt: '2026-11-12T03:00:00.000Z',
+  days: [{ weekday: 1, items: [{ seriesSlug: 'example', title: 'Example', image: null,
+    time: '18:30', episode: 7, released: true, episodeSlug: 'example-episode-7-subtitle-indonesia' }] }] }
+```
+
+All seven weekdays are returned (Monday = 1, Sunday = 7), including empty days.
+`image` and `episode` may be null; `episodeSlug` is present only for released slots.
+The scraper scans the shared RSS feed cache in parallel batches until it reaches
+posts older than eight days (maximum 30 pages). Each series contributes its newest
+episode's WIB weekday and HH:MM, sorted by time then title. If that release falls
+in the current Monday–Sunday WIB week, the slot is released and shows episode N;
+otherwise it is an estimate for episode N+1. Canonical series metadata comes from
+ongoing catalogue cards, with episode-page metadata for missing or aliased slugs,
+cached for a day. No playback mirrors are resolved for the schedule.
+
+Samehadaku has no schedule page (`/jadwal-rilis/` returns 404). These are inferred
+upload times, not official broadcast promises: delays, batch uploads, finales,
+and irregular releases can produce inaccurate predictions. Shows with no release
+in eight days are absent. Otakudesu is not used. Upstream errors return 502 so an
+incomplete schedule is not silently cached. Successful responses are cached for
+30 minutes, with a fresh cache key at WIB midnight to avoid crossing a week boundary.

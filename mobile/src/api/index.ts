@@ -49,3 +49,8 @@ export function useResolvedSource(mirror: string, attempt: number) {
   return useQuery({ queryKey: ['resolve', mirror, attempt], enabled: !!mirror, retry: false,
     queryFn: ({ signal }) => apiGet<import('./types').ResolvedSource>('/api/resolve', { mirror }, signal) });
 }
+
+export function useSchedule() {
+  return useQuery({ queryKey: ['schedule'], staleTime: 60_000,
+    queryFn: ({ signal }) => apiGet<import('./types').ScheduleResponse>('/api/schedule', {}, signal) });
+}

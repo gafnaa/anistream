@@ -175,6 +175,73 @@ async function addReleaseTimes(items, page) {
   }
 }
 
+// A release timestamp is an observed upload slot, not an official broadcast time.
+const scheduleMetadata = new Map();
+const WIB_OFFSET = 7 * 60 * 60 * 1000;
+const DAY_MS = 86_400_000;
+
+export function inferSchedule(posts, metadata, now = Date.now()) {
+  const localNow = new Date(now + WIB_OFFSET);
+  const monday = Date.UTC(localNow.getUTCFullYear(), localNow.getUTCMonth(), localNow.getUTCDate())
+    - ((localNow.getUTCDay() + 6) % 7) * DAY_MS;
+  const latest = new Map();
+  for (const post of posts) {
+    const match = post.slug?.match(/^(.*)-episode-(\d+(?:\.\d+)?)-subtitle-indonesia$/);
+    const at = Date.parse(post.at);
+    if (!match || at > now || at < now - 8 * DAY_MS) continue;
+    const previous = latest.get(match[1]);
+    if (!previous || at > previous.at) latest.set(match[1], { ...post, at, number: Number(match[2]) });
+  }
+  const days = Array.from({ length: 7 }, (_, i) => ({ weekday: i + 1, items: [] }));
+  for (const [slug, post] of latest) {
+    const series = metadata.get(slug);
+    if (!series) continue;
+    const local = new Date(post.at + WIB_OFFSET);
+    const weekday = (local.getUTCDay() + 6) % 7;
+    const released = post.at + WIB_OFFSET >= monday;
+    days[weekday].items.push({ seriesSlug: series.slug, title: series.title, image: series.image,
+      time: local.toISOString().slice(11, 16), episode: post.number + (released ? 0 : 1), released,
+      ...(released ? { episodeSlug: post.slug } : {}) });
+  }
+  for (const day of days) day.items.sort((a, b) => a.time.localeCompare(b.time) || a.title.localeCompare(b.title));
+  return { timezone: 'Asia/Jakarta', generatedAt: new Date(now).toISOString(), days };
+}
+
+let scheduleRequest;
+export function getSchedule() {
+  if (!scheduleRequest) scheduleRequest = buildSchedule().finally(() => { scheduleRequest = undefined; });
+  return scheduleRequest;
+}
+
+async function buildSchedule() {
+  const cutoff = Date.now() - 8 * DAY_MS;
+  const posts = [];
+  // Parallel batches keep cold requests short; stop once the feed crosses the window.
+  for (let n = 1; n <= 30; n += 8) {
+    const batches = await Promise.all(Array.from({ length: Math.min(8, 31 - n) }, (_, i) => feedPage(n + i)));
+    posts.push(...batches.flat());
+    if (batches.some(batch => !batch.length || batch.some(post => Date.parse(post.at) < cutoff))) break;
+  }
+  const slugs = [...new Set(posts.filter(post => Date.parse(post.at) >= cutoff)
+    .map(post => post.slug?.match(/^(.*)-episode-\d+(?:\.\d+)?-subtitle-indonesia$/)?.[1]).filter(Boolean))];
+  const missing = slugs.filter(slug => !scheduleMetadata.has(slug) || Date.now() - scheduleMetadata.get(slug).at > DAY_MS);
+  if (missing.length) {
+    const catalogue = await Promise.all([1, 2, 3].map(page => browse({ status: 'ongoing', page })));
+    for (const card of catalogue.flatMap(page => page.items)) scheduleMetadata.set(card.slug, { ...card, at: Date.now() });
+    // Only look up series absent from the listing; never resolve playback mirrors here.
+    await Promise.all(missing.filter(slug => !scheduleMetadata.has(slug) || Date.now() - scheduleMetadata.get(slug).at > DAY_MS).map(async slug => {
+      const post = posts.find(post => post.slug?.startsWith(slug + '-episode-'));
+      const $ = cheerio.load(await fetchPage(`${BASE}/${post.slug}/`));
+      const metadata = episodeSeriesMetadata($);
+      if (!metadata.seriesSlug || !metadata.seriesTitle) throw new Error(`Series metadata missing for ${post.slug}`);
+      const image = $('.single-info img').first();
+      scheduleMetadata.set(slug, { slug: metadata.seriesSlug, title: metadata.seriesTitle,
+        image: normalizeImage(image.attr('data-src') || image.attr('src')), at: Date.now() });
+    }));
+  }
+  return inferSchedule(posts, scheduleMetadata);
+}
+
 const ORDER_MAP = {
   update: 'update',
   latest: 'latest',
@@ -442,6 +509,13 @@ async function getOtakudesuSources(title, number, signal) {
     .sort((a, b) => Number(a.type === 'iframe') - Number(b.type === 'iframe') || parseInt(b.quality || '0') - parseInt(a.quality || '0'));
 }
 
+function episodeSeriesMetadata($) {
+  const seriesHref = $('.naveps a[href*="/anime/"]').attr('href') || $('.single-info h2[itemprop="partOfSeries"]').closest('a').attr('href');
+  const seriesTitle = clean($('.single-info h2[itemprop="partOfSeries"]').text()) || null;
+
+  return { seriesSlug: slugFromUrl(seriesHref), seriesTitle };
+}
+
 export async function getEpisode(slug) {
   const odController = new AbortController();
   const odTimer = setTimeout(() => odController.abort(), 6000);
@@ -465,8 +539,7 @@ export async function getEpisode(slug) {
     if (number) odSources = getOtakudesuSources(title.replace(/\s*episode\s+.*$/i, ''), Number(number), odController.signal).catch(() => []);
   }
 
-  const seriesHref = $('.naveps a[href*="/anime/"]').attr('href') || $('.single-info h2[itemprop="partOfSeries"]').closest('a').attr('href');
-  const seriesTitle = clean($('.single-info h2[itemprop="partOfSeries"]').text()) || null;
+  const { seriesSlug, seriesTitle } = episodeSeriesMetadata($);
 
   const prev = $('.naveps a[rel="prev"]').attr('href') || null;
   const next = $('.naveps a[rel="next"]').attr('href') || null;
@@ -505,7 +578,7 @@ export async function getEpisode(slug) {
   return {
     slug,
     title,
-    seriesSlug: slugFromUrl(seriesHref),
+    seriesSlug,
     seriesTitle,
     prevSlug: slugFromUrl(prev),
     nextSlug: slugFromUrl(next),

@@ -68,7 +68,7 @@ AniStream uses these as interaction patterns only. It has its own visual identit
   `https://waf-server.tail1ec650.ts.net:5175`.
 - **New endpoints needed** (server work, done in the milestone that needs it):
   - `GET /api/genres`: genre list with slugs, for Discover. Scraped from the site's genre filter.
-  - `GET /api/schedule`: weekly release schedule, for the New Episodes screen. Only if the site exposes one (spike in M4).
+  - `GET /api/schedule`: weekly release slots inferred from the last eight days of samehadaku RSS timestamps, for the New Episodes screen (M8).
 - **Why the scraper stays on the server:** the site sits behind a WAF that needs browser-like
   headers, its markup changes often, and a server fix reaches every installed app
   at once without an app update.
@@ -161,7 +161,7 @@ Browse by intent rather than by URL.
 
 ### 5.6 New — `/(tabs)/new`
 - P0 **Latest episodes**: a list of the newest releases (`GET /api/latest`), grouped by **Today · Yesterday · This week**. Each row shows a thumbnail, series title, episode number and time since release.
-- P1 **Schedule**: a day picker (Mon–Sun) listing the series airing that day. It depends on `GET /api/schedule` (spike).
+- P1 **Schedule**: a day picker (Mon–Sun) listing the series airing that day. Uses `GET /api/schedule`; times are inferred upload slots in WIB.
 - P1 Badge on episodes from series in My List.
 
 ### 5.7 History — `/(tabs)/history`
@@ -364,7 +364,7 @@ Each milestone is one or more PRs (see AGENTS.md → Git workflow).
 | M5 | **Discover, Search, Genre results** + `/api/genres` | You can find any show by genre or name in 3 taps or fewer |
 | M6 | **New + History + My Space** (+ schedule spike) | All five tabs complete |
 | M7 | **Settings, onboarding, offline/error states, deep links, icon/splash** | v0.x APK released and reviewed on a real phone |
-| M8 | **Schedule**: `GET /api/schedule` scraped from samehadaku's weekly schedule (cached) + the *Jadwal tayang* segment on New (`schedule.png`): Mon–Sun day picker, today selected, series airing that day with time and My List marker | The schedule for every weekday matches samehadaku's page; tapping a show opens its detail |
+| M8 | **Schedule**: `GET /api/schedule` inferred from samehadaku RSS release history (cached 30 minutes) + the *Jadwal tayang* segment on New (`schedule.png`): Mon–Sun day picker, today selected, series airing that day with time and My List marker | Weekday/time slots match recent RSS history in WIB; tapping a show opens its detail or its released episode |
 | M9 | **Downloads** (`downloads*.png`, `DOWNLOADS.md`): download button on detail/episode rows, quality sheet, queue (progress, ETA, pause, resume, retry), Wi-Fi-only on by default, ready-to-watch list in My Space → Unduhan, delete with confirmation, offline playback in the player. HLS episodes are saved as local segments + rewritten playlist (or MP4 where the mirror is a file); iframe-only mirrors can't be downloaded and the button says so | An HLS episode downloads, survives an app restart mid-download, and plays in airplane mode |
 
 ## 10. Future (v2+)

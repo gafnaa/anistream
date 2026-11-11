@@ -104,6 +104,7 @@ npx expo start            # scan the QR code with Expo Go, or press "a" for an A
 |---|---|
 | `GET /api/home` | Latest, ongoing and trending lists |
 | `GET /api/latest?page=` | Latest episode releases |
+| `GET /api/schedule` | `{ timezone, generatedAt, days: [{ weekday: 1..7, items: [{ seriesSlug, title, image, time, episode, released, episodeSlug? }] }] }` — inferred WIB slots, cached 30 minutes; see [contract and caveats](docs/BACKEND.md#inferred-release-schedule) |
 | `GET /api/browse?status=&type=&order=&genre=&page=` | Catalogue |
 | `GET /api/genres` | `[{ slug, name, count? }]` from the catalogue filter; cached 24 hours |
 | `GET /api/search?q=&page=` | Search results |
