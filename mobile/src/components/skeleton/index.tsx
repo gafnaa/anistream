@@ -49,17 +49,17 @@ export function SkeletonText({ lines = 2, lineHeight = 16 }: { lines?: number; l
 export function PosterSkeleton({ width = 96 }: { width?: DimensionValue }) {
   return <SkeletonBox width={width} height={undefined} style={{ height: 'auto', aspectRatio: 2 / 3 }} />;
 }
-export function RowSkeleton() {
+export function RowSkeleton({ posterWidth: fixedWidth }: { posterWidth?: number } = {}) {
   const [width, setWidth] = useState(0);
   // Three full posters and half a fourth indicate the future horizontal rail.
-  const posterWidth = Math.max(0, (width - spacing.md * 3) / 3.5);
+  const posterWidth = fixedWidth ?? Math.max(0, (width - spacing.md * 3) / 3.5);
   return <View style={styles.row} onLayout={e => setWidth(e.nativeEvent.layout.width)}>
     <SkeletonBox width="44%" height={24} />
     <View style={styles.posters}>{[0, 1, 2, 3].map(i => <PosterSkeleton key={i} width={posterWidth} />)}</View>
   </View>;
 }
-export function HeroSkeleton() {
-  return <View style={styles.hero}>
+export function HeroSkeleton({ height = 360 }: { height?: number }) {
+  return <View style={[styles.hero, { height }]}>
     <SkeletonBox height="100%" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.surface }} />
     <View style={styles.heroText}><SkeletonText lines={2} lineHeight={32} />
       <SkeletonBox width="40%" height={16} /><SkeletonBox width="60%" height={48} /></View>

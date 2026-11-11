@@ -1,0 +1,19 @@
+import { Image } from 'expo-image';
+import { router } from 'expo-router';
+import { Pressable, View } from 'react-native';
+import { Text } from './Text';
+import { colors, radius } from '@/theme';
+
+export type CardItem = { slug: string; title: string; image: string | null; kind?: 'series' | 'episode' };
+export function openCard(item: CardItem) {
+  router.push({ pathname: item.kind === 'episode' ? '/watch/[slug]' : '/series/[slug]', params: { slug: item.slug } });
+}
+export function PosterCard({ item }: { item: CardItem }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={item.title} onPress={() => openCard(item)}
+    style={({ pressed }) => ({ width: 96, opacity: pressed ? 0.7 : 1, gap: 8 })}>
+    <View style={{ width: 96, height: 144, backgroundColor: colors.card, borderRadius: radius.card, overflow: 'hidden' }}>
+      <Image source={item.image} contentFit="cover" transition={200} style={{ width: '100%', height: '100%' }} />
+    </View>
+    <Text variant="caption" numberOfLines={2} style={{ minHeight: 32 }}>{item.title}</Text>
+  </Pressable>;
+}
