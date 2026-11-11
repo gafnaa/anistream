@@ -2,6 +2,17 @@ import { getSettings } from '@/storage/settings';
 import { getLocales } from 'expo-localization';
 
 const en = {
+  etaMinutes: 'minutes left',
+  downloads: 'Downloads', downloadEpisode: 'Download episode', downloadUnavailable: 'This episode cannot be downloaded yet',
+  downloadAdded: 'Already in downloads', wifiOnly: 'Only over Wi-Fi', wifiWaiting: 'Waiting for Wi-Fi', networkWaiting: 'Waiting for a connection',
+  startDownload: 'Start download', sizeEstimate: 'File sizes are estimates.', qualityRecommended: 'Recommended', qualityBest: 'Best quality', qualityCompact: 'Save space',
+  downloadReady: 'Ready to watch', downloadQueue: 'Queue', downloading: 'Downloading', offlineReady: 'Ready to watch offline', offlineCount: 'episodes ready to watch offline',
+  deviceStorage: 'Device storage', availableStorage: 'available', downloadEmpty: 'No downloads yet', downloadEmptyLead: 'Take your favourite stories anywhere.',
+  downloadEmptyHint: 'Download episodes from the anime page. Watch anytime, without an internet connection.',
+  downloadFailed: 'Download failed. Try again.', downloadPaused: 'Paused', downloadQueued: 'Queued', downloadPause: 'Pause download', downloadResume: 'Resume download',
+  etaSeconds: 'seconds left', deleteDownload: 'Delete download?', deleteDownloadHint: 'The episode file will be removed from this device.', clearDownloads: 'Delete all downloads',
+  webDownloads: 'Downloads are available in the Android and iOS app.', playingDownload: 'Stop playback before deleting this download.', manageDownload: 'Manage download',
+
   settings: "Settings",
   playback: "Playback",
   autoplay: "Play the next episode",
@@ -194,6 +205,17 @@ const en = {
 } as const;
 type Dictionary = { [K in keyof typeof en]: string };
 const id: Dictionary = {
+  etaMinutes: 'menit lagi',
+  downloads: 'Unduhan', downloadEpisode: 'Unduh episode', downloadUnavailable: 'Episode ini belum bisa diunduh',
+  downloadAdded: 'Sudah dalam unduhan', wifiOnly: 'Hanya melalui Wi-Fi', wifiWaiting: 'Menunggu Wi-Fi', networkWaiting: 'Menunggu koneksi',
+  startDownload: 'Mulai unduh', sizeEstimate: 'Ukuran file merupakan perkiraan.', qualityRecommended: 'Direkomendasikan', qualityBest: 'Kualitas terbaik', qualityCompact: 'Hemat ruang',
+  downloadReady: 'Siap ditonton', downloadQueue: 'Antrean', downloading: 'Sedang diunduh', offlineReady: 'Siap ditonton offline', offlineCount: 'episode siap ditonton offline',
+  deviceStorage: 'Penyimpanan perangkat', availableStorage: 'tersedia', downloadEmpty: 'Belum ada unduhan', downloadEmptyLead: 'Bawa cerita favoritmu ke mana saja.',
+  downloadEmptyHint: 'Unduh episode dari halaman anime. Tonton kapan saja, tanpa koneksi internet.',
+  downloadFailed: 'Unduhan gagal. Coba lagi.', downloadPaused: 'Dijeda', downloadQueued: 'Dalam antrean', downloadPause: 'Jeda unduhan', downloadResume: 'Lanjutkan unduhan',
+  etaSeconds: 'detik lagi', deleteDownload: 'Hapus unduhan?', deleteDownloadHint: 'File episode akan dihapus dari perangkat ini.', clearDownloads: 'Hapus semua unduhan',
+  webDownloads: 'Unduhan tersedia di aplikasi Android dan iOS.', playingDownload: 'Hentikan pemutaran sebelum menghapus unduhan ini.', manageDownload: 'Kelola unduhan',
+
   settings: "Pengaturan",
   playback: "Pemutaran",
   autoplay: "Putar episode berikutnya",

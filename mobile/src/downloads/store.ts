@@ -1,0 +1,11 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSyncExternalStore } from 'react';
+import { DownloadQueue } from './queue';
+export const downloads = new DownloadQueue(AsyncStorage);
+export const downloadsReady = downloads.load();
+export const useDownloads = () => useSyncExternalStore(downloads.subscribe, downloads.snapshot, downloads.snapshot);
+export const useDownloadsHydrated = () => useSyncExternalStore(downloads.subscribe, () => downloads.hydrated, () => false);
+export const useDownloadsError = () => useSyncExternalStore(downloads.subscribe, () => downloads.error, () => false);
+const playing = new Set<string>();
+export const setDownloadPlaying = (slug: string, active: boolean) => { if (active) playing.add(slug); else playing.delete(slug); };
+export const isDownloadPlaying = (slug: string) => playing.has(slug);

@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 
-export type Settings = { language: 'id' | 'en' | 'system'; autoplayNext: boolean; resume: boolean; onboarded: boolean };
-const defaults: Settings = { language: 'system', autoplayNext: true, resume: true, onboarded: false };
+export type Settings = { language: 'id' | 'en' | 'system'; autoplayNext: boolean; resume: boolean; onboarded: boolean; wifiOnly: boolean };
+const defaults: Settings = { language: 'system', autoplayNext: true, resume: true, onboarded: false, wifiOnly: true };
 let settings = defaults;
 let hydrated = false;
 const listeners = new Set<() => void>();
@@ -12,7 +12,7 @@ export const settingsReady = AsyncStorage.getItem('anistream.settings.v1').then(
   const value = raw ? JSON.parse(raw) : {};
   settings = { language: ['id', 'en', 'system'].includes(value?.language) ? value.language : 'system',
     autoplayNext: typeof value?.autoplayNext === 'boolean' ? value.autoplayNext : true,
-    resume: typeof value?.resume === 'boolean' ? value.resume : true, onboarded: value?.onboarded === true };
+    resume: typeof value?.resume === 'boolean' ? value.resume : true, onboarded: value?.onboarded === true, wifiOnly: value?.wifiOnly !== false };
 }).catch(() => undefined).finally(() => { hydrated = true; emit(); });
 let pending = Promise.resolve();
 export function updateSettings(change: Partial<Settings>) {

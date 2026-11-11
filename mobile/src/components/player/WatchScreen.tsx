@@ -1,3 +1,5 @@
+import { useDownloads, useDownloadsHydrated } from '@/downloads/store';
+import { LocalWatchScreen } from './LocalWatchScreen';
 import { useOffline, OfflineState } from '../Connectivity';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, Pressable, Platform, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -24,7 +26,15 @@ import { NativePlayer } from './NativePlayer';
 import { EmbedPlayer } from './EmbedPlayer';
 import { PlayerButton } from './PlayerButton';
 
-export function WatchScreen({ slug, previewNext = false }: { slug: string; previewNext?: boolean }) {
+export function WatchScreen(props: { slug: string; previewNext?: boolean }) {
+  const records = useDownloads();
+  const hydrated = useDownloadsHydrated();
+  const local = records.find(item => item.slug === props.slug && item.status === 'ready');
+  if (!hydrated) return <View style={{ flex: 1, backgroundColor: colors.bg }}><ActivityIndicator color={colors.text} /></View>;
+  if (Platform.OS !== 'web' && local) return <LocalWatchScreen key={props.slug} item={local} />;
+  return <OnlineWatchScreen {...props} />;
+}
+function OnlineWatchScreen({ slug, previewNext = false }: { slug: string; previewNext?: boolean }) {
   const offline = useOffline();
   const settings = useSettings();
   const episode = useEpisode(slug);

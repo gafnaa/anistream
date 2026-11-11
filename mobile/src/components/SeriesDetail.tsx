@@ -1,3 +1,4 @@
+import { DownloadButton } from './DownloadButton';
 import { BrowseNavigation } from '@/components/BrowseNavigation';
 import { useMemo, useState } from 'react';
 import { FlatList, PixelRatio, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
@@ -172,6 +173,7 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: insets.top + 8, paddingBottom: 8, paddingHorizontal: 16, zIndex: 10, backgroundColor: scrolled ? colors.bg : 'transparent', flexDirection: 'row', justifyContent: 'space-between' }}>
       <SeriesBackButton />
       {scrolled && <Text variant="title" numberOfLines={1} style={{ flex: 1, alignSelf: 'center', marginHorizontal: 12 }}>{series.title}</Text>}
+      {target && <DownloadButton metadata={{ slug: target, seriesSlug: series.slug, seriesTitle: series.title, episode: episodes.find(item => item.slug === target)?.number ?? '', poster: series.image ?? '' }} />}
       <IconButton label={t('share')} icon="share-outline" onPress={() => {
         setShareError(false);
         void Share.share({ message: `anistream://series/${series.slug}` }).catch(() => setShareError(true));

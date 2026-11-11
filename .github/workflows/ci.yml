@@ -42,6 +42,7 @@ jobs:
         run: echo '/// <reference types="expo/types" />' > expo-env.d.ts
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm run test:downloads
       - run: npx -y expo-doctor@1.21.6  # 1.21.7 (2026-11-11) ships without @expo/env and crashes; unpin once fixed
       - name: Bundle Android JS
         run: npx expo export --platform android --output-dir /tmp/expo-export
