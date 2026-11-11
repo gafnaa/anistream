@@ -99,3 +99,4 @@ export function useSeriesProgress(seriesSlug: string) {
     return { lastWatched: entries[0], byEpisode };
   }, [items, seriesSlug]);
 }
+export function clearBookmarks() { return bookmarks.update(() => []); }

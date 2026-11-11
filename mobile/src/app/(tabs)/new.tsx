@@ -1,3 +1,5 @@
+import { RecoveryState } from '@/components/RecoveryState';
+import { useOffline, OfflineState } from '@/components/Connectivity';
 import { SectionList, RefreshControl, View } from 'react-native';
 import { useLatest } from '@/api';
 import { useBookmarks } from '@/storage';
@@ -31,6 +33,7 @@ function releaseMeta(releasedAt?: string) {
 }
 
 export default function New() {
+  const offline = useOffline();
   const query = useLatest();
   const bookmarks = useBookmarks();
   const bottom = useTabBarInset();
@@ -46,7 +49,7 @@ export default function New() {
     renderSectionHeader={({ section }) => <Text variant="h2" style={{ marginBottom: 6 }}>{section.title}</Text>}
     renderItem={({ item }) => <ActivityEpisodeRow slug={item.slug} title={item.title} episode={String(item.episode ?? '')} image={item.image}
       meta={`${releaseMeta(item.releasedAt)}${bookmarks.some(saved => saved.title.trim().toLowerCase() === item.title.trim().toLowerCase()) ? ` · ${t('savedMarker')}` : ''}`} />}
-    ListEmptyComponent={query.isPending ? skeleton : query.isError ? failure : <Text muted>{t('emptyRow')}</Text>}
+    ListEmptyComponent={offline ? <OfflineState retry={() => { void query.refetch(); }} /> : query.isPending ? skeleton : query.isError ? <RecoveryState kind="error" title={t('catalogueError')} description={t('homeErrorBody')} label={t('retry')} action={() => { void query.refetch(); }} /> : <Text muted>{t('emptyRow')}</Text>}
     ListFooterComponent={items.length ? query.isFetchNextPageError || query.isRefetchError ? failure : query.isFetchingNextPage ? skeleton : undefined : undefined}
     refreshControl={<RefreshControl refreshing={query.isRefetching && !query.isFetchingNextPage} onRefresh={() => void query.refetch()} tintColor={colors.brand} />}
     onEndReached={() => { if (query.hasNextPage && !query.isFetching && !query.isFetchNextPageError) void query.fetchNextPage(); }} onEndReachedThreshold={0.5} />

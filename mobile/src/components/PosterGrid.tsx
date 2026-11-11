@@ -1,3 +1,5 @@
+import { RecoveryState } from './RecoveryState';
+import { useOffline, OfflineState } from './Connectivity';
 import type { ReactElement } from 'react';
 import { FlatList, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +17,7 @@ export function PosterGrid({ items, header, loading = false, error = false, retr
   items: CardItem[]; header?: ReactElement; loading?: boolean; error?: boolean; retry: () => void;
   next?: () => void; fetchingNext?: boolean; tabScreen?: boolean; empty?: ReactElement; footer?: ReactElement;
 }) {
+  const offline = useOffline();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const tabInset = useTabBarInset();
@@ -35,8 +38,8 @@ export function PosterGrid({ items, header, loading = false, error = false, retr
     columnWrapperStyle={{ gap: 12 }} initialNumToRender={12} windowSize={5}
     ListHeaderComponent={header}
     renderItem={({ item }) => <View style={{ paddingBottom: 20 }}><PosterCard item={item} width={posterWidth} onLongPress={onLongPress ? () => onLongPress(item) : undefined} /></View>}
-    ListEmptyComponent={loading ? <View style={{ minHeight: 600 }}>{showSkeleton && skeletons}</View>
-      : error ? failure : empty ?? <Text muted style={{ paddingVertical: 24 }}>{t('emptyRow')}</Text>}
+    ListEmptyComponent={offline && (loading || error) ? <OfflineState retry={retry} /> : loading ? <View style={{ minHeight: 600 }}>{showSkeleton && skeletons}</View>
+      : error ? <RecoveryState kind="error" title={t('catalogueError')} description={t('homeErrorBody')} label={t('retry')} action={retry} /> : empty ?? <Text muted style={{ paddingVertical: 24 }}>{t('emptyRow')}</Text>}
     ListFooterComponent={unique.length > 0 ? error ? failure : fetchingNext ? skeletons : footer : undefined}
     onEndReached={next} onEndReachedThreshold={0.5} />;
 }

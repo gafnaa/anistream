@@ -1,3 +1,4 @@
+import { useOffline, OfflineState } from '../Connectivity';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, Pressable, Platform, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { router, Stack } from 'expo-router';
@@ -6,6 +7,7 @@ import * as Orientation from 'expo-screen-orientation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEpisode, useResolvedSource, useSeries } from '@/api';
 import { API_URL } from '@/api/client';
+import { useSettings } from '@/storage/settings';
 import { addHistory, useHistory, useHistoryHydrated } from '@/storage';
 import { Text } from '@/components/Text';
 import { EpisodeRow } from '@/components/EpisodeRow';
@@ -23,13 +25,15 @@ import { EmbedPlayer } from './EmbedPlayer';
 import { PlayerButton } from './PlayerButton';
 
 export function WatchScreen({ slug, previewNext = false }: { slug: string; previewNext?: boolean }) {
+  const offline = useOffline();
+  const settings = useSettings();
   const episode = useEpisode(slug);
   const series = useSeries(episode.data?.seriesSlug ?? '');
   const history = useHistory();
   const historyHydrated = useHistoryHydrated();
   const saved = history.find(item => item.episodeSlug === slug);
   const [position, setPosition] = useState<number | null>(null);
-  const resume = position ?? (saved && saved.duration - saved.position > 30 ? saved.position : 0);
+  const resume = position ?? (settings.resume && saved && saved.duration - saved.position > 30 ? saved.position : 0);
   const failedAttempt = useRef('');
   const [index, setIndex] = useState(0);
   const [attempt, setAttempt] = useState(0);
@@ -118,6 +122,7 @@ export function WatchScreen({ slug, previewNext = false }: { slug: string; previ
   </View>;
   const episodeTitle = episode.data ? episode.data.title.replace(/\s*subtitle indonesia\s*$/i, '').replace(episode.data.seriesTitle ?? '', '').trim() || episode.data.title : '';
   const error = failed || episode.isError || (episode.isSuccess && !sources.length);
+  if (offline && !episode.data) return <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top }}><AmbientBackground /><PlayerButton icon="arrow-back" label={t('back')} onPress={goBack} /><OfflineState retry={retry} /></View>;
   return <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: full ? 0 : insets.top }}>
     <AmbientBackground />
     {!full && <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 8 }}>
@@ -137,7 +142,7 @@ export function WatchScreen({ slug, previewNext = false }: { slug: string; previ
       </View> : source && historyHydrated ? source.type === 'iframe' ? <><EmbedPlayer url={source.url} onError={fail} />{chrome}</> :
         <NativePlayer key={`${index}-${attempt}`} url={new URL(source.playUrl || source.url, `${API_URL}/`).href} type={source.type}
           resume={resume} onSave={save} onError={fail}
-          onNext={episode.data?.nextSlug ? next : undefined} previewNext={previewNext}>{chrome}</NativePlayer>
+          onNext={settings.autoplayNext && episode.data?.nextSlug ? next : undefined} previewNext={previewNext}>{chrome}</NativePlayer>
         : <View style={styles.error}><ActivityIndicator color={colors.text} />{chrome}</View>}
     </View>
     {!full && <FlatList

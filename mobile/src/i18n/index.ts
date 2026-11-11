@@ -1,6 +1,44 @@
+import { getSettings } from '@/storage/settings';
 import { getLocales } from 'expo-localization';
 
 const en = {
+  settings: "Settings",
+  playback: "Playback",
+  autoplay: "Play the next episode",
+  autoplayHint: "Continue automatically when an episode ends",
+  resumeSetting: "Resume from last position",
+  resumeHint: "Return to your last scene",
+  preferences: "Preferences",
+  language: "Language",
+  systemLanguage: "Follow system",
+  storage: "Data & storage",
+  about: "About AniStream",
+  storageTitle: "Room for your stories",
+  storageHint: "Manage data stored on this device.",
+  imageCache: "Image cache",
+  cacheUnknown: "Size unavailable",
+  cacheHint: "Images will load again when needed.",
+  clearCache: "Clear image cache",
+  localData: "Local data",
+  clearList: "Clear My List",
+  clearSearchHistory: "Clear search history",
+  clearDataTitle: "Remove this data?",
+  clearDataHint: "This action removes the selected data from this device and cannot be undone.",
+  cleared: "Data cleared",
+  cacheUnsupported: "Image cache is managed by your browser.",
+  version: "Version",
+  source: "Project on GitHub",
+  licences: "Open-source licenses",
+  updates: "Check for updates",
+  contentDisclaimer: "About the content",
+  disclaimer: "AniStream does not store videos. Content availability depends on the source provider.",
+  onboardTitle: "What kind of world do you like?",
+  onboardHint: "Find anime, save your list, and continue your story whenever you like.",
+  onboardStart: "Browse anime",
+  skip: "Skip",
+  offlineBanner: "Offline · Showing saved data",
+  remove: "Remove",
+
   historyRemoved: 'History removed',
   today: 'Today',
   yesterday: 'Yesterday',
@@ -151,6 +189,43 @@ const en = {
 } as const;
 type Dictionary = { [K in keyof typeof en]: string };
 const id: Dictionary = {
+  settings: "Pengaturan",
+  playback: "Pemutaran",
+  autoplay: "Putar episode berikutnya",
+  autoplayHint: "Lanjut otomatis setelah episode selesai",
+  resumeSetting: "Lanjutkan dari posisi terakhir",
+  resumeHint: "Kembali tepat di adegan terakhirmu",
+  preferences: "Preferensi",
+  language: "Bahasa",
+  systemLanguage: "Ikuti sistem",
+  storage: "Data & penyimpanan",
+  about: "Tentang AniStream",
+  storageTitle: "Ruang untuk ceritamu",
+  storageHint: "Kelola data yang tersimpan di perangkat ini.",
+  imageCache: "Cache gambar",
+  cacheUnknown: "Ukuran tidak tersedia",
+  cacheHint: "Gambar akan dimuat ulang saat dibutuhkan.",
+  clearCache: "Bersihkan cache gambar",
+  localData: "Data lokal",
+  clearList: "Hapus Daftar Saya",
+  clearSearchHistory: "Hapus riwayat pencarian",
+  clearDataTitle: "Hapus data ini?",
+  clearDataHint: "Data yang dipilih akan dihapus dari perangkat ini dan tidak dapat dikembalikan.",
+  cleared: "Data dihapus",
+  cacheUnsupported: "Cache gambar dikelola oleh browser.",
+  version: "Versi",
+  source: "Proyek di GitHub",
+  licences: "Lisensi sumber terbuka",
+  updates: "Periksa pembaruan",
+  contentDisclaimer: "Tentang konten",
+  disclaimer: "AniStream tidak menyimpan video. Ketersediaan konten mengikuti sumber penyedia.",
+  onboardTitle: "Dunia seperti apa yang kamu suka?",
+  onboardHint: "Temukan anime, simpan daftarmu, dan lanjutkan ceritamu kapan saja.",
+  onboardStart: "Mulai jelajahi",
+  skip: "Lewati",
+  offlineBanner: "Offline · Menampilkan data tersimpan",
+  remove: "Hapus",
+
   historyRemoved: 'Riwayat dihapus',
   today: 'Hari ini',
   yesterday: 'Kemarin',
@@ -303,6 +378,7 @@ export type TranslationKey = keyof Dictionary;
 export type Language = 'id' | 'en';
 export const dictionaries = { id, en } satisfies Record<Language, Dictionary>;
 export function t(key: TranslationKey): string {
-  const language = getLocales()[0]?.languageCode === 'id' ? 'id' : 'en';
+  const preference = getSettings().language;
+  const language = preference === 'system' ? (getLocales()[0]?.languageCode === 'id' ? 'id' : 'en') : preference;
   return dictionaries[language][key];
 }

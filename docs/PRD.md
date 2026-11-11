@@ -385,3 +385,34 @@ Each milestone is one or more PRs (see AGENTS.md → Git workflow).
 | Can `expo-video` play the CDN stream directly with a `Referer` header? | Cuts load on the proxy | Spike during M4; keep the proxy as the default |
 | Blogger WebView may show ads or redirects | Poor experience | Block navigation via `onShouldStartLoadWithRequest`; allowlist hosts |
 | Content rights | Store rejection, takedown | Sideload only; the app hosts nothing. Revisit before any public release |
+
+### M7 implementation notes
+
+Settings are available from the gear in My Space. Language (system, Indonesian,
+English), next-episode autoplay and playback resume persist on the device.
+Storage offers confirmed removal of history, recent searches, My List and native
+image caches. Expo Image does not expose a portable total cache size, so the UI
+reports that size is unavailable. Browser caches remain browser-managed.
+Onboarding introduces browsing on the first ordinary launch. Skip and the primary
+CTA both persist completion. Genre preference chips are deferred until Home can
+consume those preferences; there are no nonfunctional selections.
+
+Deep links use the existing `anistream` scheme and file-based Expo Router paths:
+
+- `anistream://series/<series-slug>` opens series details.
+- `anistream://watch/<episode-slug>` opens the player (use an episode slug).
+- `anistream://genre/<genre-slug>` opens that genre's catalogue.
+
+Cold deep links bypass onboarding for that launch without setting its completion
+flag. The root stack anchors to the tabs, and standalone back buttons fall back
+to Home (settings fall back to My Space). Unknown routes use `+not-found` with
+search and Home recovery actions. Test scheme dispatch on an installed native
+build; Expo web verifies the equivalent `/series`, `/watch` and `/genre` paths.
+Offline connectivity pauses requests and shows a banner above cached in-session
+results; uncached content screens offer retry and Home. Query data is currently
+cached in memory, not persisted across process restarts.
+
+Appearance, server-order and quality preferences, developer tools, genre-based
+onboarding and downloads are hidden. Downloads remain M9. The existing native
+icon and splash assets and app version are unchanged; the splash background
+already matches `#0B0D12`. A real-phone review/release remains a separate step.

@@ -1,3 +1,4 @@
+import { useOffline, OfflineState } from '@/components/Connectivity';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { View } from 'react-native';
@@ -16,11 +17,13 @@ import { t } from '@/i18n';
 
 const palette = Object.values(genreGradients);
 export default function Discover() {
+  const offline = useOffline();
   const genres = useGenres();
   const [allGenres, setAllGenres] = useState(false);
   const home = useHome();
   const artwork = [...(home.data?.trending ?? []), ...(home.data?.ongoing ?? [])];
   const skeleton = useDelayedSkeleton(genres.isPending);
+  if (offline && !genres.data) return <Screen title={t('discover')} preview={false}><OfflineState retry={() => { void genres.refetch(); }} /></Screen>;
   return <Screen title={t('discover')} titleVariant="h1" preview={false}>
     <Button variant="secondary" accessibilityLabel={t('searchHint')} onPress={() => router.push('/search')}
       style={{ justifyContent: 'flex-start', gap: 12, height: 48, borderRadius: 6, borderWidth: 1, borderColor: colors.line }}>

@@ -1,3 +1,4 @@
+import { useOffline, OfflineState } from '@/components/Connectivity';
 import { AmbientBackground } from '@/components/AmbientBackground';
 import { useMemo, useState } from 'react';
 import { Animated, Pressable, RefreshControl, View } from 'react-native';
@@ -23,6 +24,7 @@ import { colors } from '@/theme';
 import { t } from '@/i18n';
 
 export default function Home() {
+  const offline = useOffline();
   const heroHeight = useHeroHeight();
   const home = useHome();
   const latest = useLatest();
@@ -52,12 +54,13 @@ export default function Home() {
     await Promise.allSettled([home.refetch(), latest.refetch(), completed.refetch()]);
     setRefreshing(false);
   };
+  if (offline && !home.data) return <View style={{ flex: 1, backgroundColor: colors.bg }}><AmbientBackground /><OfflineState retry={() => { void refresh(); }} /></View>;
   return <View style={{ flex: 1, backgroundColor: colors.bg }}>
     <AmbientBackground /><Animated.ScrollView scrollEventThrottle={16} onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scroll } } }], { useNativeDriver: false })}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.brand} progressViewOffset={insets.top + 56} />}
       contentContainerStyle={{ paddingBottom: bottom + 24, gap: 24 }}>
       {home.isError && !home.data ? <View style={{ minHeight: heroHeight, paddingTop: insets.top + 56 }}>
-        <RecoveryState title={t('offlineTitle')} description={t('homeErrorBody')} label={t('retry')} action={() => void refresh()}
+        <RecoveryState kind="error" title={t('homeError')} description={t('homeErrorBody')} label={t('retry')} action={() => void refresh()}
           secondaryLabel={t('myList')} secondary={() => router.push('/me')} />
       </View> : home.data ? <HeroBanner items={heroItems} />
         : <View style={{ height: heroHeight }}>{skeleton && <View style={{ height: heroHeight }}><HeroSkeleton height={heroHeight} /></View>}</View>}
