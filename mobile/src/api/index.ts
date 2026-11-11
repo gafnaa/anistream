@@ -1,6 +1,7 @@
 import { QueryClient, useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { apiGet } from './client';
-import type { BrowseParams, EpisodeResponse, HomeResponse, PageResponse, SearchResponse, SeriesResponse } from './types';
+import { apiGet, ApiError } from './client';
+import { fallbackGenres } from './genres';
+import type { Genre, BrowseParams, EpisodeResponse, HomeResponse, PageResponse, SearchResponse, SeriesResponse } from './types';
 
 export function createQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, retry: 2 } } });
@@ -27,10 +28,21 @@ export function useSearch(q: string) {
     queryFn: ({ pageParam, signal }) => apiGet<SearchResponse>('/api/search', { q: query, page: pageParam }, signal),
     getNextPageParam: last => last.hasNext ? last.page + 1 : undefined });
 }
-export function useBrowse(params: BrowseParams = {}) {
-  return useInfiniteQuery({ queryKey: ['browse', params], initialPageParam: params.page ?? 1,
+export function useBrowse(params: BrowseParams = {}, enabled = true) {
+  return useInfiniteQuery({ queryKey: ['browse', params], enabled, initialPageParam: params.page ?? 1,
     queryFn: ({ pageParam, signal }) => apiGet<PageResponse>('/api/browse', { ...params, page: pageParam }, signal),
     getNextPageParam: last => last.hasNext ? last.page + 1 : undefined });
+}
+
+export function useGenres() {
+  const query = useQuery({ queryKey: ['genres'], staleTime: 86_400_000,
+    queryFn: async ({ signal }) => {
+      try { return await apiGet<Genre[]>('/api/genres', {}, signal); } catch (error) {
+        if (error instanceof ApiError && error.status === 404) return fallbackGenres;
+        throw error;
+      }
+    } });
+  return { ...query, data: query.data ?? (query.isError ? fallbackGenres : undefined) };
 }
 
 export function useResolvedSource(mirror: string, attempt: number) {

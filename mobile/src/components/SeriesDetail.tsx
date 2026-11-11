@@ -18,6 +18,10 @@ import { ActionButton } from './ActionButton';
 import { Chip } from './Chip';
 import { ArtworkBackdrop } from './ArtworkBackdrop';
 import { SkeletonBox, SkeletonText, SkeletonMotionControl } from './skeleton';
+import { useBrowse } from '@/api';
+import { Row } from './Row';
+import { PosterCard } from './PosterCard';
+import { Button } from './ui/button';
 
 let sessionDescending = false;
 export function goBack() {
@@ -61,6 +65,8 @@ function Synopsis({ text }: { text: string | null }) {
   </View>;
 }
 export function SeriesDetail({ series }: { series: SeriesResponse }) {
+  const genre = series.genreLinks?.[0]?.slug;
+  const related = useBrowse({ genre }, !!genre);
   const insets = useSafeAreaInsets();
   const saved = useIsBookmarked(series.slug);
   const { lastWatched } = useSeriesProgress(series.slug);
@@ -111,8 +117,13 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
             <Text variant="caption" muted>{meta}</Text>
             {series.rating && <Text variant="caption">{`★ ${series.rating}`}</Text>}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {/* TODO(M5): link genre chips once /genre/[slug] and genre slugs exist. */}
-              {series.genres.map(genre => <Chip key={genre} label={genre} tone="cyan" />)}
+              {series.genres.map(name => {
+                const link = series.genreLinks?.find(item => item.name === name);
+                return link ? <Button key={name} variant="outline" size="sm"
+                  onPress={() => router.push({ pathname: '/genre/[slug]', params: { slug: link.slug } })}>
+                  <Text variant="caption">{name}</Text>
+                </Button> : <Chip key={name} label={name} tone="cyan" />;
+              })}
             </View>
           </View>
         </View>
@@ -127,6 +138,10 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
           {shareError && <Text accessibilityRole="alert">{t('shareError')}</Text>}
           <View style={{ marginTop: 12 }}><Synopsis text={series.synopsis} /></View>
         </View>
+        {genre && <View style={{ paddingBottom: 24 }}><Row title={t('moreLikeThis')}
+          items={related.data?.pages.flatMap(page => page.items).filter(item => item.slug !== series.slug) ?? []}
+          loading={related.isPending} error={related.isError} retry={() => void related.refetch()}
+          itemKey={item => item.slug} renderItem={item => <PosterCard item={item} />} /></View>}
         <View style={{ paddingHorizontal: 24, paddingBottom: 16, gap: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <Text variant="h2" accessibilityRole="header">{t('episodesHeading')}</Text>
