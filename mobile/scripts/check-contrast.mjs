@@ -23,6 +23,12 @@ check('primary on overlay', text, rgb('#2C2F3A'));
 const glass = composite(rgb('#13151C'), rgb('#FFFFFF'), 0.92);
 check('muted on glass over white', muted, glass);
 check('primary on glass over white', text, glass);
+for (const [name, foreground] of [['inactive navbar icon', muted], ['active navbar icon', rgb('#F43F5E')]]) {
+  const background = name.startsWith('active') ? composite(rgb('#F43F5E'), glass, 38 / 255) : glass;
+  const value = ratio(foreground, background);
+  console.log(`${name} on glass over white: ${value.toFixed(2)}:1`);
+  if (value < 3) throw new Error(`${name} fails non-text contrast`);
+}
 for (const [name, tone] of Object.entries(tones)) {
   check(`${name} solid`, rgb('#0B0D12'), rgb(tone.solid));
   for (const surface of ['#0B0D12', '#13151C', '#242630', '#2C2F3A']) {
