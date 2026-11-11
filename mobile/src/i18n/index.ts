@@ -1,6 +1,9 @@
 import { getLocales } from 'expo-localization';
 
 const en = {
+  featuredCarousel: 'Featured anime',
+  previousTitle: 'Previous title',
+  nextTitle: 'Next title',
   inMyList: 'In My List',
   resumeEpisode: 'Resume',
   episodeLabel: 'Episode',
@@ -69,6 +72,9 @@ const en = {
 } as const;
 type Dictionary = { [K in keyof typeof en]: string };
 const id: Dictionary = {
+  featuredCarousel: 'Anime pilihan',
+  previousTitle: 'Judul sebelumnya',
+  nextTitle: 'Judul berikutnya',
   inMyList: 'Dalam Daftar Saya',
   resumeEpisode: 'Lanjutkan',
   episodeLabel: 'Episode',

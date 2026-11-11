@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHome, useLatest, useBrowse } from '@/api';
 import type { TrendingCard } from '@/api/types';
 import { Text } from '@/components/Text';
-import { HeroBanner, HERO_HEIGHT } from '@/components/HeroBanner';
+import { HeroBanner, useHeroHeight } from '@/components/HeroBanner';
 import { Row } from '@/components/Row';
 import { PosterCard } from '@/components/PosterCard';
 import { EpisodeCard } from '@/components/EpisodeCard';
@@ -20,6 +20,7 @@ import { colors } from '@/theme';
 import { t } from '@/i18n';
 
 export default function Home() {
+  const heroHeight = useHeroHeight();
   const home = useHome();
   const latest = useLatest();
   const completed = useBrowse({ status: 'completed' });
@@ -52,11 +53,11 @@ export default function Home() {
     <Animated.ScrollView scrollEventThrottle={16} onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scroll } } }], { useNativeDriver: false })}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.brand} progressViewOffset={insets.top + 56} />}
       contentContainerStyle={{ paddingBottom: bottom + 24, gap: 24 }}>
-      {home.isError && !home.data ? <View style={{ minHeight: HERO_HEIGHT, padding: 24, paddingTop: insets.top + 100, gap: 16, justifyContent: 'center' }}>
+      {home.isError && !home.data ? <View style={{ minHeight: heroHeight, padding: 24, paddingTop: insets.top + 100, gap: 16, justifyContent: 'center' }}>
         <Text variant="h1">{t('homeError')}</Text><Text muted>{t('homeErrorBody')}</Text>
         <ActionButton primary label={t('retry')} onPress={() => void refresh()} />
       </View> : home.data ? <HeroBanner items={heroItems} />
-        : <View style={{ height: HERO_HEIGHT }}>{skeleton && <View style={{ height: HERO_HEIGHT }}><HeroSkeleton height={HERO_HEIGHT} /></View>}</View>}
+        : <View style={{ height: heroHeight }}>{skeleton && <View style={{ height: heroHeight }}><HeroSkeleton height={heroHeight} /></View>}</View>}
       {home.data && home.isError && <View accessibilityRole="alert" style={{ paddingHorizontal: 16, paddingVertical: 4, gap: 12, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface }}>
         <Text variant="caption" style={{ flex: 1 }}>{t('cachedError')}</Text><ActionButton label={t('retry')} onPress={() => void refresh()} />
       </View>}

@@ -8,12 +8,12 @@ import { colors } from '@/theme';
 import { t, type TranslationKey } from '@/i18n';
 
 const tabs = [
-  { name: 'index', label: 'home', icon: 'home-outline' },
-  { name: 'discover', label: 'discover', icon: 'search-outline' },
-  { name: 'new', label: 'new', icon: 'play-circle-outline' },
-  { name: 'history', label: 'history', icon: 'time-outline' },
-  { name: 'me', label: 'me', icon: 'person-outline' },
-] as const satisfies readonly { name: string; label: TranslationKey; icon: keyof typeof Ionicons.glyphMap }[];
+  { name: 'index', label: 'home', icon: 'home-outline', activeIcon: 'home' },
+  { name: 'discover', label: 'discover', icon: 'compass-outline', activeIcon: 'compass' },
+  { name: 'new', label: 'new', icon: 'play-circle-outline', activeIcon: 'play-circle' },
+  { name: 'history', label: 'history', icon: 'time-outline', activeIcon: 'time' },
+  { name: 'me', label: 'me', icon: 'person-outline', activeIcon: 'person' },
+] as const satisfies readonly { name: string; label: TranslationKey; icon: keyof typeof Ionicons.glyphMap; activeIcon: keyof typeof Ionicons.glyphMap }[];
 export default function TabLayout() {
   const [targets] = useState(() => Object.fromEntries(tabs.map(tab => [tab.name, createRef<ComponentRef<typeof View>>()])));
   return <TabBlurTarget.Provider value={targets}><Tabs tabBar={props => <GlassTabBar {...props} />}
@@ -24,6 +24,6 @@ export default function TabLayout() {
     screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colors.bg } }}>
     {tabs.map(tab => <Tabs.Screen key={tab.name} name={tab.name} options={{ title: t(tab.label),
       tabBarAccessibilityLabel: t(tab.label),
-      tabBarIcon: ({ color, size }) => <Ionicons name={tab.icon} color={typeof color === 'string' ? color : colors.text} size={size} accessible={false} /> }} />)}
+      tabBarIcon: ({ focused, color, size }) => <Ionicons name={focused ? tab.activeIcon : tab.icon} color={typeof color === 'string' ? color : colors.text} size={size} accessible={false} /> }} />)}
   </Tabs></TabBlurTarget.Provider>;
 }
