@@ -235,7 +235,7 @@ The user's watch history.
 | Token | Value | Use |
 |---|---|---|
 | `bg` | `#0B0D12` | App background |
-| `surface` | `#12151D` | Tab bar, sheets |
+| `surface` | `#12151D` | Sheets, fallback material |
 | `card` | `#171B25` | Cards, skeleton base |
 | `card-2` | `#1E2431` | Pressed states, skeleton highlight |
 | `line` | `#262C3A` | Dividers |
@@ -245,6 +245,25 @@ The user's watch history.
 | `brand-strong` | `#6C4CF0` | Primary button fill. White label is 5.3:1; white on `brand` is only 4.35:1 and fails AA |
 | `brand-2` | `#4D7CFF` | Gradients with `brand` |
 | `accent` | `#FF4D6D` | "NEW" badges, live or airing markers |
+
+
+| `brand-50 … brand-900` | `#F2EEFF`, `#E5DDFF`, `#CDBBFF`, `#B49AFF`, `#9C7FFF`, `#7C5CFF`, `#6C4CF0`, `#5534C4`, `#402890`, `#2B1D5C` | Brand tonal ramp; labels sit outside swatches |
+| `elevated` / `overlay` | `#222838` / `#2B3345` | Raised surfaces |
+| `glass` | `rgba(18,21,29,0.90)` | Contrast floor above blurred tab material |
+| `tones.cyan` | `#22D3EE` / `#22D3EE1F` | Airing; solid / subtle |
+| `tones.amber` | `#FBBF24` / `#FBBF241F` | Watching; solid / subtle |
+| `tones.pink` | `#FF4D6D` / `#FF4D6D1F` | New episode; solid / subtle |
+| `tones.green` | `#4ADE80` / `#4ADE801F` | Completed; solid / subtle |
+| `gradients.brand` | `#5534C4 → #244BB2` | Violet to blue |
+| `gradients.sunset` | `#9B234C → #805500` | Pink to amber |
+| `gradients.ocean` | `#16449A → #076477` | Blue to cyan |
+| `gradients.aurora` | `#5534C4 → #12645E` | Violet to teal |
+| `gradients.heroScrim` | `#0B0D1200 → #0B0D12` | Artwork fade; place text only over the opaque end |
+| `genreGradients` | Action `#922C4D → #472787`; Romance `#8D285C → #582B79`; Comedy `#785300 → #764128`; Fantasy `#5534A0 → #214B71`; Sci-Fi `#2447A0 → #076477`; Horror `#532B62 → #242032`; Slice of Life `#24634E → #33515E`; Sports `#744314 → #853B39` | Distinct genre tiles with dark endpoints for readable labels |
+
+- Floating navbar: 64 dp pill, 16 dp horizontal margins, 12 dp above the bottom safe area. Glass is limited to navigation so artwork remains dominant. A 230 ms ease-out indicator tracks selection, with no transition under Reduce Motion. Scroll containers use `useTabBarInset()` to keep final items reachable.
+- Material uses guarded iOS Liquid Glass, otherwise BlurView. Android scenes supply a BlurTargetView; `dimezisBlurViewSdk31Plus` avoids expensive older Android blur and retains the dark fill fallback.
+- Contrast: the glass tint composited over pure white is `#2A2C34`, giving muted labels **4.53:1** and primary labels **12.31:1** before additional dark blur tint. Active labels use `text`, with `brand` reserved for the icon. Primary/muted text on `overlay` is 11.17:1 / 4.11:1: use primary text there. Subtle chips use primary labels and solid chips use `bg` labels. All gradient labels use `text`; see the contrast audit in the PR for endpoint and chip measurements. Tonal-ramp labels sit on `bg`, never directly on the ramp.
 
 - Radius: 6 (chips), 10 (cards), 14 (sheets). Spacing on a 4 pt grid: 4, 8, 12, 16, 24, 32.
 - Poster ratio is **2:3**, and episode or continue-watching cards are **16:9**. Every image keeps its box size while loading, so the layout never shifts.
