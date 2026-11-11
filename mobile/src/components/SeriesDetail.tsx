@@ -1,3 +1,4 @@
+import { BrowseNavigation } from '@/components/BrowseNavigation';
 import { useMemo, useState } from 'react';
 import { FlatList, PixelRatio, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { RemovalDialog } from './RemovalDialog';
@@ -6,7 +7,7 @@ import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 import { EpisodeRow } from './EpisodeRow';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import Icon from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { SeriesEpisode, SeriesResponse } from '@/api/types';
@@ -15,8 +16,8 @@ import { colors, radius } from '@/theme';
 import { t } from '@/i18n';
 import { Text } from './Text';
 import { ActionButton } from './ActionButton';
-import { Chip } from './Chip';
-import { ArtworkBackdrop } from './ArtworkBackdrop';
+import { LinearGradient } from 'expo-linear-gradient';
+import { AmbientBackground } from './AmbientBackground';
 import { SkeletonBox, SkeletonText, SkeletonMotionControl } from './skeleton';
 import { useBrowse } from '@/api';
 import { Row } from './Row';
@@ -39,18 +40,17 @@ export function SeriesBackButton() {
   return <IconButton label={t('back')} icon="arrow-back" onPress={goBack} />;
 }
 function IconButton({ label, icon, onPress }: {
-  label: string; icon: keyof typeof Ionicons.glyphMap; onPress: () => void;
+  label: string; icon: string; onPress: () => void;
 }) {
   return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress}
     style={({ pressed }) => [styles.icon, { opacity: pressed ? 0.65 : 1 }]}>
-    <Ionicons name={icon} size={24} color={colors.text} />
+    <Icon name={icon} size={24} color={colors.text} />
   </Pressable>;
 }
 function Synopsis({ text }: { text: string | null }) {
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
   return <View style={{ gap: 8 }}>
-    <Text variant="h2" accessibilityRole="header">{t('synopsis')}</Text>
     <View>
       <Text muted numberOfLines={expanded ? undefined : 3}>{text || t('noSynopsis')}</Text>
       <Text accessible={false} aria-hidden pointerEvents="none" muted
@@ -99,49 +99,46 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
     void toggleBookmark({ slug: series.slug, title: series.title, poster: series.image ?? '' })
       .then(() => setConfirmRemoval(false)).catch(() => setStorageError(true));
   };
-  const meta = [series.status, series.type, series.released || series.season,
+  const meta = [series.released || series.season, series.type, series.status,
     `${episodes.length} ${t('episodesLabel')}`].filter(Boolean).join(' · ');
-  return <View style={styles.screen}>
+  return <View style={styles.screen}><AmbientBackground />
     <FlatList onScroll={event => setScrolled(event.nativeEvent.contentOffset.y > 24)} scrollEventThrottle={32} data={visible} keyExtractor={item => item.slug}
       initialNumToRender={10} maxToRenderPerBatch={10} windowSize={5}
-      contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
       ListHeaderComponent={<View>
-        <View style={{ overflow: 'hidden' }}>
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 400 }}>
-            <ArtworkBackdrop source={series.banner ?? series.image} />
-          </View>
-          <View style={{ paddingTop: insets.top + 80, paddingHorizontal: 24, gap: 16 }}>
+        <View style={{ height: 350, marginBottom: 24 }}>
+          <Image source={series.banner ?? series.image} contentFit="cover" style={[StyleSheet.absoluteFill, { height: 325 }]} />
+          <LinearGradient pointerEvents="none" colors={['#0B0D1200', '#0B0D12E6']} style={{ position: 'absolute', left: 0, right: 0, bottom: 25, height: 180 }} />
+          <View style={{ position: 'absolute', bottom: 0, left: 24, right: 24, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
             <Image source={series.image} contentFit="cover" accessibilityLabel={series.title}
-              style={{ width: 120, height: 180, borderRadius: radius.card, backgroundColor: colors.card }} />
-            <Text variant="h1" numberOfLines={3} accessibilityRole="header">{series.title}</Text>
-            <Text variant="caption" muted>{meta}</Text>
-            {series.rating && <Text variant="caption">{`★ ${series.rating}`}</Text>}
+              style={{ width: 86, height: 129, borderRadius: radius.card, backgroundColor: colors.card }} />
+            <Text variant="display" numberOfLines={2} accessibilityRole="header" style={{ flex: 1 }}>{series.title}</Text>
+          </View>
+        </View>
+        <View style={{ paddingHorizontal: 24, gap: 20 }}>
+          <Text variant="caption" muted>{meta}</Text>
+          <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
+            {target && <ActionButton primary label={playLabel} onPress={() => {
+              haptic(); router.push({ pathname: '/watch/[slug]', params: { slug: target } });
+            }} />}
+            <ActionButton label={`${saved ? '✓' : '+'} ${t(saved ? 'inMyList' : 'myList')}`}
+              onPress={() => saved ? setConfirmRemoval(true) : toggle()} />
+          </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {series.genres.map(name => {
                 const link = series.genreLinks?.find(item => item.name === name);
-                return link ? <Button key={name} variant="outline" size="sm"
-                  onPress={() => router.push({ pathname: '/genre/[slug]', params: { slug: link.slug } })}>
+                return <Button key={name} variant="secondary" size="sm" style={{ flex: 1, borderRadius: 6 }}
+                  onPress={() => link && router.push({ pathname: '/genre/[slug]', params: { slug: link.slug } })}>
                   <Text variant="caption">{name}</Text>
-                </Button> : <Chip key={name} label={name} tone="cyan" />;
+                </Button>;
               })}
             </View>
-          </View>
         </View>
         <View style={{ padding: 24, gap: 12 }}>
-          {target && <ActionButton primary label={playLabel} onPress={() => {
-            haptic();
-            router.push({ pathname: '/watch/[slug]', params: { slug: target } });
-          }} />}
-          <ActionButton label={`${saved ? '✓' : '+'} ${t(saved ? 'inMyList' : 'myList')}`}
-            onPress={() => saved ? setConfirmRemoval(true) : toggle()} />
           {storageError && <Text accessibilityRole="alert">{t('storageError')}</Text>}
           {shareError && <Text accessibilityRole="alert">{t('shareError')}</Text>}
-          <View style={{ marginTop: 12 }}><Synopsis text={series.synopsis} /></View>
+          <View><Synopsis text={series.synopsis} /></View>
         </View>
-        {genre && <View style={{ paddingBottom: 24 }}><Row title={t('moreLikeThis')}
-          items={related.data?.pages.flatMap(page => page.items).filter(item => item.slug !== series.slug) ?? []}
-          loading={related.isPending} error={related.isError} retry={() => void related.refetch()}
-          itemKey={item => item.slug} renderItem={item => <PosterCard item={item} />} /></View>}
         <View style={{ paddingHorizontal: 24, paddingBottom: 16, gap: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <Text variant="h2" accessibilityRole="header">{t('episodesHeading')}</Text>
@@ -164,10 +161,14 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
           </ScrollView>}
         </View>
       </View>}
+      ListFooterComponent={genre ? <View style={{ paddingBottom: 24 }}><Row title={t('moreLikeThis')}
+          items={related.data?.pages.flatMap(page => page.items).filter(item => item.slug !== series.slug) ?? []}
+          loading={related.isPending} error={related.isError} retry={() => void related.refetch()}
+          itemKey={item => item.slug} renderItem={item => <PosterCard item={item} />} /></View> : undefined}
       ListEmptyComponent={<View style={{ padding: 24, gap: 16 }}>
         <Text muted>{t('noEpisodes')}</Text><ActionButton label={t('backHome')} onPress={() => router.replace('/')} />
       </View>}
-      renderItem={({ item }) => <View style={{ marginHorizontal: 24 }}><EpisodeRow episode={item} seriesSlug={series.slug} seriesTitle={series.title} /></View>} />
+      renderItem={({ item }) => <View style={{ marginHorizontal: 24 }}><EpisodeRow episode={item} seriesSlug={series.slug} seriesTitle={series.title} image={series.banner ?? series.image} /></View>} />
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: insets.top + 8, paddingBottom: 8, paddingHorizontal: 16, zIndex: 10, backgroundColor: scrolled ? colors.bg : 'transparent', flexDirection: 'row', justifyContent: 'space-between' }}>
       <SeriesBackButton />
       <IconButton label={t('share')} icon="share-outline" onPress={() => {
@@ -175,6 +176,7 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
         void Share.share({ message: `anistream://series/${series.slug}` }).catch(() => setShareError(true));
       }} />
     </View>
+    <BrowseNavigation selected="home" />
     <RemovalDialog open={confirmRemoval} onOpenChange={setConfirmRemoval} title={t('removeBookmark')}
       description={series.title} error={storageError} onRemove={toggle} />
   </View>;
