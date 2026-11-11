@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { SeriesResponse } from '@/api/types';
+import type { SeriesEpisode, SeriesResponse } from '@/api/types';
 import { toggleBookmark, useIsBookmarked, useSeriesProgress } from '@/storage';
 import { colors, radius } from '@/theme';
 import { t } from '@/i18n';
@@ -125,7 +125,7 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
         </View>
         <View style={{ paddingHorizontal: 24, paddingBottom: 16, gap: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-            <Text variant="h2" accessibilityRole="header">{t('episodeLabel')}</Text>
+            <Text variant="h2" accessibilityRole="header">{t('episodesHeading')}</Text>
             <ActionButton label={t(descending ? 'descending' : 'ascending')} onPress={() => {
               sessionDescending = !descending;
               setDescending(sessionDescending);
@@ -137,7 +137,7 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
               onPress={() => setRange(index)} style={({ pressed }) => ({ minHeight: 48, minWidth: 64,
                 paddingHorizontal: 12, justifyContent: 'center', borderRadius: radius.chip,
                 backgroundColor: selectedRange === index ? colors.overlay : colors.card, opacity: pressed ? 0.65 : 1 })}>
-              <Text variant="caption" tabular>{index * 50 + 1}–{Math.min(episodes.length, (index + 1) * 50)}</Text>
+              <Text variant="caption" tabular>{rangeLabel(episodes, index)}</Text>
             </Pressable>)}
           </ScrollView>}
         </View>
@@ -158,7 +158,7 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
               <Text variant="title" tabular>{item.number ?? '▶'}</Text>
             </View>
             <View style={{ flex: 1, gap: 4 }}>
-              <Text variant="title" muted={watched}>{item.title}</Text>
+              <Text variant="title" muted={watched}>{episodeDisplayTitle(item.title, series.title)}</Text>
               {!!item.date && <Text variant="caption" muted>{item.date}</Text>}
               {progress > 0 && <Text variant="caption">{watched ? '✓ ' : ''}{t(watched ? 'watched' : 'inProgress')}</Text>}
             </View>
@@ -212,3 +212,21 @@ const styles = StyleSheet.create({
   icon: { width: 48, height: 48, borderRadius: radius.card, backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center' },
 });
+
+/** Range chips use real episode numbers (e.g. 1086–1135), not list positions. */
+function rangeLabel(episodes: SeriesEpisode[], index: number) {
+  const first = episodes[index * 50];
+  const last = episodes[Math.min(episodes.length, (index + 1) * 50) - 1];
+  const from = first?.number ?? String(index * 50 + 1);
+  const to = last?.number ?? String(Math.min(episodes.length, (index + 1) * 50));
+  return `${from}–${to}`;
+}
+
+/** "One Piece Episode 1086 Subtitle Indonesia" → "Episode 1086". */
+function episodeDisplayTitle(title: string, seriesTitle: string) {
+  let cleaned = title.replace(/\s*subtitle indonesia\s*$/i, '').trim();
+  if (cleaned.toLowerCase().startsWith(seriesTitle.toLowerCase())) {
+    cleaned = cleaned.slice(seriesTitle.length).trim();
+  }
+  return cleaned || title;
+}
