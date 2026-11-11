@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
+import { ArtworkBackdrop } from './ArtworkBackdrop';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useReducedMotion } from 'react-native-reanimated';
@@ -11,7 +11,7 @@ import { useIsBookmarked, toggleBookmark } from '@/storage';
 import { Text } from './Text';
 import { Chip } from './Chip';
 import { ActionButton } from './ActionButton';
-import { colors, gradients } from '@/theme';
+import { colors } from '@/theme';
 import { t } from '@/i18n';
 
 export const HERO_HEIGHT = 500;
@@ -43,10 +43,10 @@ export function HeroBanner({ items }: { items: TrendingCard[] }) {
       .then(() => setConfirmRemoval(false)).catch(() => setStorageError(true));
   };
   return <View style={styles.hero} onTouchStart={() => setTouched(true)} onTouchEnd={() => setTouched(false)} onTouchCancel={() => setTouched(false)}>
-    <Image source={item.image} blurRadius={28} contentFit="cover" style={[StyleSheet.absoluteFill, { transform: [{ scale: 1.12 }] }]} />
-    <Image source={item.image} contentFit="contain" transition={reducedMotion ? 0 : 250}
-      style={{ position: 'absolute', top: 45, right: 20, height: 300, width: 200 }} />
-    <LinearGradient colors={[...gradients.heroScrim, colors.bg]} locations={[0, 0.65, 1]} style={StyleSheet.absoluteFill} />
+    <ArtworkBackdrop source={item.image}>
+      <Image source={item.image} contentFit="contain" transition={reducedMotion ? 0 : 250}
+        style={{ position: 'absolute', top: 45, right: 20, height: 300, width: 200 }} />
+    </ArtworkBackdrop>
     <View style={styles.content}>
       <Text variant="display" numberOfLines={2} accessibilityRole="header">{item.title}</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, minHeight: 24 }}>

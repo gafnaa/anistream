@@ -1,6 +1,25 @@
 import { getLocales } from 'expo-localization';
 
 const en = {
+  inMyList: 'In My List',
+  resumeEpisode: 'Resume',
+  episodeLabel: 'Episode',
+  episodesHeading: 'Episodes',
+  episodesLabel: 'episodes',
+  synopsis: 'Synopsis',
+  more: 'More',
+  less: 'Less',
+  ascending: 'Oldest first',
+  descending: 'Newest first',
+  watched: 'Watched',
+  inProgress: 'In progress',
+  noEpisodes: 'Episodes are not available yet. Save this series or browse another title.',
+  noSynopsis: 'No synopsis available.',
+  seriesError: 'Unable to load this series',
+  seriesNotFound: 'Series not found',
+  share: 'Share series',
+  shareError: 'Could not share. Please try again.',
+
   removeBookmark: 'Remove from My List?',
   play: 'Play',
   myList: 'My List',
@@ -50,6 +69,25 @@ const en = {
 } as const;
 type Dictionary = { [K in keyof typeof en]: string };
 const id: Dictionary = {
+  inMyList: 'Dalam Daftar Saya',
+  resumeEpisode: 'Lanjutkan',
+  episodeLabel: 'Episode',
+  episodesHeading: 'Daftar episode',
+  episodesLabel: 'episode',
+  synopsis: 'Sinopsis',
+  more: 'Selengkapnya',
+  less: 'Ringkas',
+  ascending: 'Terlama dahulu',
+  descending: 'Terbaru dahulu',
+  watched: 'Sudah ditonton',
+  inProgress: 'Sedang ditonton',
+  noEpisodes: 'Episode belum tersedia. Simpan seri ini atau cari judul lain.',
+  noSynopsis: 'Sinopsis belum tersedia.',
+  seriesError: 'Seri gagal dimuat',
+  seriesNotFound: 'Seri tidak ditemukan',
+  share: 'Bagikan seri',
+  shareError: 'Gagal membagikan. Silakan coba lagi.',
+
   removeBookmark: 'Hapus dari Daftar Saya?',
   play: 'Putar',
   myList: 'Daftar Saya',

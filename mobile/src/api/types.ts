@@ -13,7 +13,7 @@ export type PageResponse = { items: CatalogueCard[]; page: number; hasNext: bool
 export type SearchResponse = PageResponse & { query: string };
 export type SeriesEpisode = { slug: string; number: string | null; title: string; date: string; url: string };
 export type SeriesResponse = {
-  slug: string; title: string; image: string | null; banner: string | null; synopsis: string;
+  slug: string; title: string; image: string | null; banner: string | null; synopsis: string | null;
   genres: string[]; trailerId: string | null; status: string | null; studio: string | null;
   released: string | null; season: string | null; type: string | null; rating: string | null;
   episodes: SeriesEpisode[];
