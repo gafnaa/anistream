@@ -184,18 +184,18 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
 }
 export function SeriesSkeleton() {
   const insets = useSafeAreaInsets();
-  return <View style={[styles.screen, { paddingTop: insets.top + 80, paddingHorizontal: 24 }]}>
-    <View style={{ position: 'absolute', top: 0, left: 0, right: 0 }}><SkeletonBox height={400} style={{ backgroundColor: colors.surface, borderRadius: 0 }} /></View>
-    <View style={{ position: 'relative' }}><SkeletonMotionControl floatingControl>
-      <View style={{ gap: 16 }}>
-        <SkeletonBox width={120} height={180} />
-        <SkeletonText lines={2} lineHeight={30} />
-        <SkeletonBox width="80%" /><SkeletonBox width="55%" height={24} />
-        <SkeletonBox height={48} /><SkeletonBox height={48} />
-        <SkeletonText lines={3} />
-        <SkeletonBox height={80} /><SkeletonBox height={80} />
-      </View>
-    </SkeletonMotionControl></View>
+  return <View style={styles.screen}><AmbientBackground />
+    <SkeletonBox height={325} style={{ borderRadius: 0 }} />
+    <View style={{ position: 'absolute', top: 221, left: 24 }}><SkeletonBox width={86} height={129} /></View>
+    <View style={{ position: 'absolute', top: 260, left: 126, right: 24 }}><SkeletonText lines={2} lineHeight={30} /></View>
+    <View style={{ paddingHorizontal: 24, paddingTop: 49, gap: 24 }}>
+      <SkeletonBox width="75%" height={16} />
+      <View style={{ flexDirection: 'row', gap: 12 }}><SkeletonBox width="48%" height={40} style={{ borderRadius: 20 }} /><SkeletonBox width="48%" height={40} style={{ borderRadius: 20 }} /></View>
+      <SkeletonBox height={30} />
+      <SkeletonMotionControl overlayControl><SkeletonText lines={3} lineHeight={16} /></SkeletonMotionControl>
+      <SkeletonBox width="35%" height={24} />
+      <SkeletonBox height={88} /><SkeletonBox height={88} />
+    </View>
     <View style={{ position: 'absolute', top: insets.top + 8, left: 16 }}><SeriesBackButton /></View>
   </View>;
 }

@@ -14,7 +14,7 @@ export function Row<T>({ title, items, renderItem, itemKey, loading = false, err
   const height = landscape ? 239 : 224;
   if (loading) return <View style={{ height, paddingHorizontal: 24 }}>{skeleton && (landscape
     ? <View style={{ gap: 16 }}><SkeletonBox height={24} width="44%" /><SkeletonBox height={135} width={240} /></View>
-    : <RowSkeleton posterWidth={96} />)}</View>;
+    : <RowSkeleton posterWidth={104} />)}</View>;
   return <View style={{ minHeight: height, gap: 16 }}>
     <Text variant="h2" accessibilityRole="header" style={{ paddingHorizontal: 24 }}>{title}</Text>
     {error && items.length === 0 ? <View style={{ paddingHorizontal: 24, gap: 8 }}><Text muted>{t('rowError')}</Text>
