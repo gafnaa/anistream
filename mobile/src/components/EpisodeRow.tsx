@@ -1,3 +1,4 @@
+import { DownloadButton } from './DownloadButton';
 import { View } from 'react-native';
 import { Image } from 'expo-image';
 import Icon from '@/components/Icon';
@@ -16,9 +17,9 @@ export function EpisodeRow({ episode, seriesSlug, seriesTitle, current = false, 
   const progress = byEpisode.get(episode.slug)?.progress ?? 0;
   const watched = progress >= 0.9;
   const title = episode.title.replace(/\s*subtitle indonesia\s*$/i, '').replace(seriesTitle, '').trim() || episode.title;
-  return <Button variant="ghost" accessibilityLabel={`${t('episodeLabel')} ${episode.number ?? ''}, ${title}`}
+  return <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><Button variant="ghost" accessibilityLabel={`${t('episodeLabel')} ${episode.number ?? ''}, ${title}`}
     accessibilityState={{ selected: current }} onPress={onPress ?? (() => router.push({ pathname: '/watch/[slug]', params: { slug: episode.slug } }))}
-    style={{ height: 'auto', minHeight: 88, paddingVertical: 8, paddingHorizontal: 0, borderRadius: 10, backgroundColor: current ? colors.card : 'transparent' }}>
+    style={{ flex: 1, height: 'auto', minHeight: 88, paddingVertical: 8, paddingHorizontal: 0, borderRadius: 10, backgroundColor: current ? colors.card : 'transparent' }}>
     <View style={{ flex: 1, gap: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <EpisodeThumbnail image={image} />
@@ -31,7 +32,7 @@ export function EpisodeRow({ episode, seriesSlug, seriesTitle, current = false, 
       </View>
       {progress > 0 && !watched && <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }} style={{ height: 4, backgroundColor: colors.line }}><View style={{ height: 4, width: `${progress * 100}%`, backgroundColor: colors.brand }} /></View>}
     </View>
-  </Button>;
+  </Button><DownloadButton metadata={{ slug: episode.slug, seriesSlug, seriesTitle, episode: episode.number ?? '', poster: image ?? '' }} /></View>;
 }
 
 export function EpisodeThumbnail({ image, progress }: { image?: string | null; progress?: number }) {

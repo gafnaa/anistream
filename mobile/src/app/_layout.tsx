@@ -1,4 +1,5 @@
 import '../../global.css';
+import { startDownloadEngine } from '@/downloads/engine';
 import { PortalHost } from '@rn-primitives/portal';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { RecoveryState } from '@/components/RecoveryState';
@@ -34,6 +35,7 @@ const serverHydrated = () => Platform.OS !== 'web';
 export const unstable_settings = { anchor: '(tabs)' };
 
 export default function RootLayout() {
+  useEffect(startDownloadEngine, []);
   const settings = useSettings();
   const settingsHydrated = useSettingsHydrated();
   const pathname = usePathname();

@@ -3,7 +3,7 @@ import { colors } from '@/theme';
 import { useState } from 'react';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { SettingsLayout, SettingsRow, SettingsDivider } from '@/components/SettingsLayout';
 import { Text } from '@/components/Text';
 import { Switch } from '@/components/ui/switch';
@@ -17,6 +17,7 @@ export default function SettingsScreen() {
     <Text variant="h2">{t('playback')}</Text>
     <SettingsRow label={t('autoplay')} hint={t('autoplayHint')}><Switch accessibilityLabel={t('autoplay')} value={settings.autoplayNext} onValueChange={autoplayNext => save({ autoplayNext })} /></SettingsRow>
     <SettingsRow label={t('resumeSetting')} hint={t('resumeHint')}><Switch accessibilityLabel={t('resumeSetting')} value={settings.resume} onValueChange={resume => save({ resume })} /></SettingsRow>
+    {Platform.OS !== 'web' && <SettingsRow label={t('wifiOnly')} hint={t('wifiWaiting')}><Switch accessibilityLabel={t('wifiOnly')} value={settings.wifiOnly} onValueChange={wifiOnly => save({ wifiOnly })} /></SettingsRow>}
     <SettingsDivider /><Text variant="h2">{t('preferences')}</Text>
     <SettingsRow icon={<Languages size={24} color={colors['text-muted']} />} label={t('language')} hint={settings.language === 'system' ? t('systemLanguage') : settings.language === 'id' ? 'Indonesia' : 'English'} onPress={() => router.push('/settings/language')} />
     <SettingsRow icon={<Database size={24} color={colors['text-muted']} />} label={t('storage')} onPress={() => router.push('/settings/storage')} />
