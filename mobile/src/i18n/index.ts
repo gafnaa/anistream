@@ -1,6 +1,20 @@
 import { getLocales } from 'expo-localization';
 
 const en = {
+  toggleControls: 'Show playback controls',
+  servers: 'Servers',
+  switchedServer: 'Switched to',
+  playbackError: 'No server could play this episode.',
+  previousEpisode: 'Previous episode',
+  nextEpisode: 'Next episode',
+  fullscreen: 'Fullscreen',
+  exitFullscreen: 'Exit fullscreen',
+  pausePlayback: 'Pause',
+  seekBack: 'Back 10 seconds',
+  seekForward: 'Forward 10 seconds',
+  seek: 'Playback position',
+  upNext: 'Up next',
+  nowPlaying: 'Now playing',
   featuredCarousel: 'Featured anime',
   previousTitle: 'Previous title',
   nextTitle: 'Next title',
@@ -72,6 +86,20 @@ const en = {
 } as const;
 type Dictionary = { [K in keyof typeof en]: string };
 const id: Dictionary = {
+  toggleControls: 'Tampilkan kontrol pemutaran',
+  servers: 'Server',
+  switchedServer: 'Beralih ke',
+  playbackError: 'Tidak ada server yang dapat memutar episode ini.',
+  previousEpisode: 'Episode sebelumnya',
+  nextEpisode: 'Episode berikutnya',
+  fullscreen: 'Layar penuh',
+  exitFullscreen: 'Keluar layar penuh',
+  pausePlayback: 'Jeda',
+  seekBack: 'Mundur 10 detik',
+  seekForward: 'Maju 10 detik',
+  seek: 'Posisi pemutaran',
+  upNext: 'Berikutnya',
+  nowPlaying: 'Sedang diputar',
   featuredCarousel: 'Anime pilihan',
   previousTitle: 'Judul sebelumnya',
   nextTitle: 'Judul berikutnya',
