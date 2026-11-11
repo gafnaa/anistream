@@ -1,5 +1,42 @@
-import { Stack } from "expo-router";
+import { useEffect, useState } from 'react';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
+import * as SystemUI from 'expo-system-ui';
+import { useFonts } from 'expo-font';
+import { PlusJakartaSans_600SemiBold } from '@expo-google-fonts/plus-jakarta-sans/600SemiBold';
+import { PlusJakartaSans_700Bold } from '@expo-google-fonts/plus-jakarta-sans/700Bold';
+import { PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans/800ExtraBold';
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { createQueryClient } from '@/api';
+import { colors } from '@/theme';
+import { t } from '@/i18n';
+
+void SplashScreen.preventAutoHideAsync();
+void SystemUI.setBackgroundColorAsync(colors.bg);
 
 export default function RootLayout() {
-  return <Stack />;
+  const [queryClient] = useState(createQueryClient);
+  const [loaded, error] = useFonts({ PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, ...Ionicons.font });
+  useEffect(() => {
+    if (loaded || error) void SplashScreen.hideAsync();
+  }, [loaded, error]);
+  if (error) throw error;
+  if (!loaded) return null;
+  return <QueryClientProvider client={queryClient}>
+    <StatusBar style="light" />
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg },
+      headerStyle: { backgroundColor: colors.surface }, headerTintColor: colors.text }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="+not-found" />
+      <Stack.Protected guard={__DEV__}>
+        <Stack.Screen name="dev/design" options={{ headerShown: true, title: t('design'), headerBackTitle: t('back') }} />
+      </Stack.Protected>
+    </Stack>
+  </QueryClientProvider>;
 }
