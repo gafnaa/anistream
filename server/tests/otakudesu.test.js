@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { getEpisode, normalizeAnimeTitle, resolveMirror } from '../scraper.js';
+import { getEpisode, normalizeAnimeTitle, resolveMirror, titleMatchScore } from '../scraper.js';
 
 test('title normalization retains season and distinguishing subtitles', () => {
   const expected = normalizeAnimeTitle('Tensei shitara Ken deshita II');
@@ -78,4 +78,12 @@ test('challenge pages are rejected without attempting a bypass', async () => {
   } finally {
     globalThis.fetch = original;
   }
+});
+
+test('a shorter otakudesu title matches only as a whole-word prefix with the same season', () => {
+  const sh = normalizeAnimeTitle('Kyouran Reijou Nia Liston: Byoujaku Reijou ni Tensei shita Kamigoroshi no Bujin no Karei naru Musouroku');
+  assert.equal(titleMatchScore(normalizeAnimeTitle('Kyouran Reijou Nia Liston Subtitle Indonesia'), sh), 0.9);
+  assert.equal(titleMatchScore(normalizeAnimeTitle('Tensei shitara Ken deshita'), normalizeAnimeTitle('Tensei shitara Ken deshita II')), 0);
+  assert.equal(titleMatchScore(normalizeAnimeTitle('Kyouran Reijou Nia'), normalizeAnimeTitle('Kyouran Reijou Niama')), 0);
+  assert.equal(titleMatchScore(normalizeAnimeTitle('One Piece'), normalizeAnimeTitle('One Piece Film Red')), 0);
 });

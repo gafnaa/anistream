@@ -285,6 +285,20 @@ export function normalizeAnimeTitle(title) {
     .replace(/[^a-z0-9]+/g, ' '));
 }
 
+const seasons = (title) => title.match(/season\d+/g)?.join(' ') ?? '';
+
+/**
+ * 1 for the same title, 0.99 for the same words in another order, 0.9 when the
+ * otakudesu title (3+ words) is a whole-word prefix of samehadaku's longer
+ * light-novel title with the same season. Anything else is 0.
+ */
+export function titleMatchScore(candidate, normalized) {
+  if (candidate === normalized) return 1;
+  if (candidate.split(' ').sort().join(' ') === normalized.split(' ').sort().join(' ')) return 0.99;
+  if (candidate.split(' ').length >= 3 && normalized.startsWith(candidate + ' ') && seasons(candidate) === seasons(normalized)) return 0.9;
+  return 0;
+}
+
 async function odFetch(url, signal, data) {
   const response = await fetch(url, {
     signal,
@@ -307,7 +321,7 @@ async function matchOtakudesu(title, signal) {
     $('h2 a[href*="/anime/"]').each((_, el) => {
       const candidate = normalizeAnimeTitle($(el).text());
       // Token equality tolerates punctuation and word order, but never a missing season or subtitle.
-      const score = candidate === normalized ? 1 : candidate.split(' ').sort().join(' ') === normalized.split(' ').sort().join(' ') ? 0.99 : 0;
+      const score = titleMatchScore(candidate, normalized);
       const url = $(el).attr('href');
       if (score && new URL(url).origin === OD_BASE) candidates.set(url, score);
     });
