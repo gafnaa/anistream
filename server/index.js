@@ -1,0 +1,239 @@
+import express from 'express';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  getHome,
+  getLatest,
+  browse,
+  search,
+  getSeries,
+  getEpisode,
+  resolveMirror,
+} from './scraper.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const app = express();
+const PORT = process.env.PORT || 5178;
+
+app.use(express.json());
+
+/* ------------------------------------------------------------------ */
+/* tiny in-memory cache so we don't hammer the upstream on every nav   */
+/* ------------------------------------------------------------------ */
+const cache = new Map();
+const TTL = {
+  home: 60_000,
+  list: 60_000,
+  series: 120_000,
+  episode: 120_000,
+  stream: 300_000,
+};
+
+function cached(key, ttl, fn) {
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < ttl) return Promise.resolve(hit.value);
+  return fn().then((value) => {
+    cache.set(key, { at: Date.now(), value });
+    if (cache.size > 500) {
+      for (const [k, v] of cache) {
+        if (Date.now() - v.at > 600_000) cache.delete(k);
+      }
+    }
+    return value;
+  });
+}
+
+const wrap = (fn) => (req, res) => {
+  Promise.resolve(fn(req, res)).catch((err) => {
+    console.error('[api]', req.path, err.message);
+    res.status(502).json({ error: err.message || 'Upstream request failed' });
+  });
+};
+
+/* ------------------------------------------------------------------ */
+/* API routes                                                          */
+/* ------------------------------------------------------------------ */
+app.get('/api/home', wrap(async (req, res) => {
+  res.json(await cached('home', TTL.home, getHome));
+}));
+
+app.get('/api/latest', wrap(async (req, res) => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  res.json(await cached(`latest:${page}`, TTL.list, () => getLatest(page)));
+}));
+
+app.get('/api/browse', wrap(async (req, res) => {
+  const { status = '', type = '', order = 'update', genre = '' } = req.query;
+  const page = Math.max(1, Number(req.query.page) || 1);
+  res.json(
+    await cached(`browse:${status}:${type}:${order}:${genre}:${page}`, TTL.list, () =>
+      browse({ status, type, order, genre, page }),
+    ),
+  );
+}));
+
+app.get('/api/search', wrap(async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  const page = Math.max(1, Number(req.query.page) || 1);
+  res.json(await cached(`search:${q}:${page}`, TTL.list, () => search(q, page)));
+}));
+
+app.get('/api/series/:slug', wrap(async (req, res) => {
+  res.json(await cached(`series:${req.params.slug}`, TTL.series, () => getSeries(req.params.slug)));
+}));
+
+app.get('/api/episode/:slug', wrap(async (req, res) => {
+  res.json(await cached(`episode:${req.params.slug}`, TTL.episode, () => getEpisode(req.params.slug)));
+}));
+
+/**
+ * Resolve a mirror page to a direct stream URL.
+ * `mirror` is passed as an absolute URL, so we validate the host first.
+ */
+app.get('/api/resolve', wrap(async (req, res) => {
+  const mirror = String(req.query.mirror || '');
+  let host;
+  try {
+    host = new URL(mirror).hostname;
+  } catch {
+    return res.status(400).json({ error: 'Invalid mirror URL' });
+  }
+
+  const allowed = /(^|\.)(xtwap\.top|blogger\.com|samehadaku\.li|ok\.ru|dailymotion\.com|youtube\.com|youtu\.be|drive\.google\.com|desustream|filemoon|acefile|bilibili)/i;
+  if (!allowed.test(host)) {
+    return res.status(400).json({ error: `Mirror host not allowed: ${host}` });
+  }
+
+  const stream = await cached(`stream:${mirror}`, TTL.stream, () => resolveMirror(mirror));
+
+  // Rewrite the manifest through our proxy: the CDN sends
+  // Access-Control-Allow-Origin: https://play.xtwap.top only, so the
+  // browser can never load these segments on its own.
+  if (stream.type === 'hls') {
+    stream.playUrl = `/api/hls?url=${encodeURIComponent(stream.url)}`;
+  } else {
+    stream.playUrl = stream.url;
+  }
+  res.json(stream);
+}));
+
+/* ------------------------------------------------------------------ */
+/* HLS proxy                                                           */
+/* ------------------------------------------------------------------ */
+
+const UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+const HOST_RE = /(^|\.)(xtwap\.top|blogger\.com|googlevideo\.com|googleusercontent\.com|akamaized\.net|cloudfront\.net|samehadaku\.li|wp\.com)$/i;
+
+function assertAllowed(target) {
+  const u = new URL(target);
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') throw new Error('Bad protocol');
+  if (!HOST_RE.test(u.hostname)) throw new Error(`Host not allowed: ${u.hostname}`);
+  return u;
+}
+
+/** Rewrite a manifest so every child URI points back through this proxy. */
+function rewriteManifest(body, baseUrl) {
+  const base = new URL(baseUrl);
+  const proxy = (abs) => `/api/hls?url=${encodeURIComponent(abs)}`;
+  const abs = (uri) => new URL(uri, base).toString();
+
+  return body
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trim();
+
+      // Tag lines carrying URIs: EXT-X-KEY, EXT-X-MAP, EXT-X-MEDIA, EXT-X-I-FRAME-STREAM-INF
+      if (trimmed.startsWith('#') && /URI="([^"]+)"/i.test(trimmed)) {
+        return trimmed.replace(/URI="([^"]+)"/gi, (_, uri) => `URI="${proxy(abs(uri))}"`);
+      }
+      if (trimmed.startsWith('#')) return trimmed;
+
+      // Blank line or a bare segment / variant playlist URI
+      if (!trimmed) return trimmed;
+      return proxy(abs(trimmed));
+    })
+    .join('\n');
+}
+
+app.get('/api/hls', wrap(async (req, res) => {
+  const target = String(req.query.url || '');
+  let url;
+  try {
+    url = assertAllowed(target);
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+  let upstream;
+  try {
+    upstream = await fetch(url.toString(), {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': UA,
+        Referer: `https://${url.hostname}/`,
+        Origin: `https://${url.hostname}`,
+        Accept: '*/*',
+      },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!upstream.ok) {
+    return res.status(upstream.status).json({ error: `Upstream ${upstream.status}` });
+  }
+
+  const contentType = upstream.headers.get('content-type') || '';
+  const isManifest =
+    /mpegurl/i.test(contentType) || /\.m3u8($|\?)/i.test(url.pathname + url.search);
+
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'public, max-age=60');
+
+  if (isManifest) {
+    const text = await upstream.text();
+    res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+    return res.send(rewriteManifest(text, url.toString()));
+  }
+
+  // Binary segment / key / init segment: stream it straight through.
+  res.setHeader('Content-Type', contentType || 'application/octet-stream');
+  const len = upstream.headers.get('content-length');
+  if (len) res.setHeader('Content-Length', len);
+
+  const reader = upstream.body.getReader();
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!res.write(Buffer.from(value))) {
+        await new Promise((r) => res.once('drain', r));
+      }
+    }
+  } finally {
+    res.end();
+  }
+}));
+
+/* ------------------------------------------------------------------ */
+/* static build (production)                                           */
+/* ------------------------------------------------------------------ */
+if (process.env.NODE_ENV === 'production') {
+  const dist = path.join(__dirname, '..', 'dist');
+  app.use(express.static(dist));
+  // SPA fallback so client-side routes survive a refresh.
+  app.use((req, res, next) => {
+    if (req.method !== 'GET' || req.path.startsWith('/api/')) return next();
+    res.sendFile('index.html', { root: dist }, (err) => {
+      if (err) next(err);
+    });
+  });
+}
+
+app.listen(PORT, () => {
+  console.log(`\n  ▶ AniStream API on http://localhost:${PORT}\n`);
+});

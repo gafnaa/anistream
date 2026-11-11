@@ -1,0 +1,352 @@
+import * as cheerio from 'cheerio';
+
+export const BASE = 'https://samehadaku.li';
+
+const UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+const TIMEOUT_MS = 20000;
+
+/**
+ * Fetch a page from samehadaku with a browser-ish header set.
+ * The site sits behind LiteSpeed + a WAF, so a plain fetch gets 403/406.
+ */
+export async function fetchPage(url, { referer = BASE + '/' } = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      redirect: 'follow',
+      headers: {
+        'User-Agent': UA,
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
+        Referer: referer,
+        'Cache-Control': 'no-cache',
+      },
+    });
+    if (!res.ok) throw new Error(`Upstream ${res.status} for ${url}`);
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Trim + collapse whitespace, used all over the parsers. */
+const clean = (s) => (s || '').replace(/\s+/g, ' ').trim();
+
+/** Samehadaku proxies images through i0/i1/i2.wp.com with a resize query. */
+function normalizeImage(src, width = 247, height = 350) {
+  if (!src) return null;
+  let url = src.trim();
+  if (url.startsWith('//')) url = 'https:' + url;
+  if (url.startsWith('data:')) return null;
+  try {
+    const u = new URL(url);
+    if (u.hostname.endsWith('wp.com')) {
+      u.searchParams.set('resize', `${width},${height}`);
+      return u.toString();
+    }
+  } catch {
+    return null;
+  }
+  return url;
+}
+
+/** Turn "/anime/foo/" or a full URL into a slug we can route on. */
+export function slugFromUrl(href) {
+  if (!href) return null;
+  try {
+    const path = href.startsWith('http') ? new URL(href).pathname : href;
+    const parts = path.split('/').filter(Boolean);
+    return parts[parts.length - 1] || null;
+  } catch {
+    return null;
+  }
+}
+
+function parseCards($, root) {
+  const items = [];
+  root.find('article.bs').each((_, el) => {
+    const a = $(el).find('a[itemprop="url"]').first();
+    const href = a.attr('href');
+    if (!href) return;
+
+    const headline = clean($(el).find('h2[itemprop="headline"]').text());
+    const ttText = clean($(el).find('.tt').clone().children().remove().end().text());
+    const title = ttText || headline.replace(/\s*Episode\s+\d+.*$/i, '').trim();
+
+    const img = $(el).find('img').first();
+    const image = normalizeImage(img.attr('data-src') || img.attr('src'));
+
+    const epText = clean($(el).find('.bt .epx').text());
+    const epMatch = epText.match(/(\d+(?:\.\d+)?)/);
+    const type = clean($(el).find('.typez').first().text());
+    const status = clean($(el).find('.status').first().text());
+    const isEpisode = /episode/i.test(href);
+
+    items.push({
+      slug: slugFromUrl(href),
+      title: title || headline,
+      episodeTitle: headline || null,
+      image,
+      type: type || null,
+      status: status || null,
+      episode: epMatch ? Number(epMatch[1]) : null,
+      kind: isEpisode ? 'episode' : 'series',
+      url: href,
+    });
+  });
+  return items;
+}
+
+/** Home page: trending banner, ongoing rail, and latest episode releases. */
+export async function getHome() {
+  const [html, ongoingRes] = await Promise.all([
+    fetchPage(BASE + '/'),
+    // The homepage has no "ongoing" block, so pull it from the catalogue.
+    browse({ status: 'ongoing', order: 'update', page: 1 }).catch(() => ({ items: [] })),
+  ]);
+  const $ = cheerio.load(html);
+
+  const latest = parseCards($, $('.listupd').first());
+  const ongoing = (ongoingRes.items || []).slice(0, 14).map((i) => ({ ...i, kind: 'series' }));
+
+  const trending = [];
+  $('.trending .tdb a').each((_, el) => {
+    const a = $(el);
+    const bg = $('.imgxb', el).attr('style') || '';
+    const m = bg.match(/url\(['"]?(.*?)['"]?\)/);
+    trending.push({
+      slug: slugFromUrl(a.attr('href')),
+      title: clean($('.numb b', el).text()) || clean($('.numb', el).text()),
+      image: m ? normalizeImage(m[1], 500, 750) : null,
+      kind: 'series',
+    });
+  });
+
+  return { latest, ongoing, trending };
+}
+
+/** Latest episode releases, paginated. */
+export async function getLatest(page = 1) {
+  const url = page > 1 ? `${BASE}/page/${page}/` : BASE + '/';
+  const html = await fetchPage(url);
+  const $ = cheerio.load(html);
+  const items = parseCards($, $('.listupd').first());
+  const hasNext = $('.hpage a.r').length > 0;
+  return { items, page, hasNext };
+}
+
+const ORDER_MAP = {
+  update: 'update',
+  latest: 'latest',
+  popular: 'popular',
+  rating: 'rating',
+  title: 'title',
+};
+
+/** Browse the anime catalogue with status/type/order filters. */
+export async function browse({ status = '', type = '', order = 'update', page = 1, genre = '' } = {}) {
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  if (type) params.set('type', type);
+  if (ORDER_MAP[order]) params.set('order', ORDER_MAP[order]);
+  if (genre) params.append('genre[]', genre);
+  if (page > 1) params.set('page', String(page));
+
+  const html = await fetchPage(`${BASE}/anime/?${params.toString()}`);
+  const $ = cheerio.load(html);
+  const items = parseCards($, $('.listupd').first()).map((i) => ({ ...i, kind: 'series' }));
+
+  // Pagination links are query based: /anime/?page=2&status=ongoing&order=update
+  let hasNext = false;
+  $('a').each((_, el) => {
+    const href = $(el).attr('href') || '';
+    const m = href.match(/[?&]page=(\d+)/);
+    if (m && Number(m[1]) === page + 1) hasNext = true;
+  });
+
+  return { items, page, hasNext };
+}
+
+/** Search series by keyword. */
+export async function search(query, page = 1) {
+  const q = String(query || '').trim();
+  if (!q) return { items: [], query: q, page: 1, hasNext: false };
+
+  const url = `${BASE}/?s=${encodeURIComponent(q)}${page > 1 ? `&page=${page}` : ''}`;
+  const html = await fetchPage(url);
+  const $ = cheerio.load(html);
+  const items = parseCards($, $('.listupd').first());
+  return { items, query: q, page, hasNext: $('.hpage a.r').length > 0 };
+}
+
+/** Full series detail: metadata, synopsis, genres, and the episode list. */
+export async function getSeries(slug) {
+  const html = await fetchPage(`${BASE}/anime/${slug}/`);
+  const $ = cheerio.load(html);
+
+  // Series pages use `.bigcontent`; episode pages use `.single-info`.
+  const info = $('.bigcontent').length ? $('.bigcontent').first() : $('.single-info').first();
+  const title = clean(info.find('h1.entry-title').text()) || clean($('h1.entry-title').first().text());
+  if (!title) throw new Error('Series not found');
+
+  const img = info.find('.thumb img').first().length ? info.find('.thumb img').first() : info.find('img').first();
+  const image = normalizeImage(img.attr('data-src') || img.attr('src'), 400, 560);
+
+  const synopsis = clean($('.bixbox.synp .entry-content').first().text()) || null;
+
+  const fields = {};
+  info.find('.spe > span').each((_, el) => {
+    const label = clean($(el).find('b').text()).replace(/:$/, '').toLowerCase();
+    const value = clean($(el).find('a').length ? $(el).find('a').map((i, a) => clean($(a).text())).get().join(', ') : $(el).clone().find('b').remove().end().text());
+    if (label) fields[label] = value;
+  });
+
+  const genres = info
+    .find('.genxed a')
+    .map((_, el) => clean($(el).text()))
+    .get()
+    .filter(Boolean);
+
+  const episodes = [];
+  $('.eplister ul li').each((_, el) => {
+    const a = $(el).find('a').first();
+    const href = a.attr('href');
+    if (!href) return;
+    episodes.push({
+      slug: slugFromUrl(href),
+      number: clean($(el).find('.epl-num').text()) || clean($(el).find('.epl-title').text()).match(/Episode\s+(\d+)/i)?.[1] || null,
+      title: clean($(el).find('.epl-title').text()),
+      date: clean($(el).find('.epl-date').text()),
+      url: href,
+    });
+  });
+
+  const trailerHref = info.find('a.trailerbutton').attr('href') || null;
+  const trailerId = trailerHref?.match(/[?&]v=([\w-]{6,})/)?.[1] || null;
+
+  return {
+    slug,
+    title,
+    image,
+    banner: image,
+    synopsis,
+    genres,
+    trailerId,
+    status: fields.status || null,
+    studio: fields.studio || null,
+    released: fields.released || null,
+    season: fields.season || null,
+    type: fields.type || null,
+    rating: clean(info.find('.rating strong').text()).replace(/Rating/i, '').trim() || null,
+    episodes,
+  };
+}
+
+/**
+ * Episode detail + playable sources.
+ *
+ * Each episode page has mirror buttons:
+ *   <button class="aspd-server" data-label="HD-1" data-url="..." data-embed="<base64 iframe>">
+ * Two kinds of mirrors show up in practice:
+ *   1. blogger.com/video.g?token=...  -> Google's player, only embeddable as an iframe
+ *   2. play.xtwap.top/cepat2.php?url= -> a JW Player wrapper that we can resolve
+ *      into a real HLS manifest (mp4/m3u8) that our own player can stream
+ */
+export async function getEpisode(slug) {
+  const url = `${BASE}/${slug}/`;
+  const html = await fetchPage(url);
+  const $ = cheerio.load(html);
+
+  const title = clean($('h1.entry-title').first().text());
+  if (!title) throw new Error('Episode not found');
+
+  const seriesHref = $('.naveps a[href*="/anime/"]').attr('href') || $('.single-info h2[itemprop="partOfSeries"]').closest('a').attr('href');
+  const seriesTitle = clean($('.single-info h2[itemprop="partOfSeries"]').text()) || null;
+
+  const prev = $('.naveps a[rel="prev"]').attr('href') || null;
+  const next = $('.naveps a[rel="next"]').attr('href') || null;
+
+  // Raw mirror buttons from the page.
+  const raw = [];
+  $('button.aspd-server').each((_, el) => {
+    const label = clean($(el).attr('data-label'));
+    const mirrorUrl = $(el).attr('data-url');
+    if (!mirrorUrl) return;
+    raw.push({ label: label || `Server ${raw.length + 1}`, url: mirrorUrl, embed: $(el).attr('data-embed') || null });
+  });
+
+  // Fallback for older layouts: iframe already in the player holder.
+  if (!raw.length) {
+    const src = $('#pembed iframe').attr('data-litespeed-src') || $('#pembed iframe').attr('src');
+    if (src && src !== 'about:blank') raw.push({ label: 'Server 1', url: src, embed: null });
+  }
+
+  const sources = raw.map((m) => {
+    const host = (() => {
+      try {
+        return new URL(m.url).hostname;
+      } catch {
+        return '';
+      }
+    })();
+    return {
+      label: m.label,
+      url: m.url,
+      host,
+      kind: host.includes('blogger') ? 'iframe' : 'resolvable',
+    };
+  });
+
+  return {
+    slug,
+    title,
+    seriesSlug: slugFromUrl(seriesHref),
+    seriesTitle,
+    prevSlug: slugFromUrl(prev),
+    nextSlug: slugFromUrl(next),
+    sources,
+    raw,
+  };
+}
+
+/**
+ * Resolve a mirror wrapper into a direct HLS/MP4 URL.
+ * The xtwap "cepat2" page returns a tiny JW Player config containing
+ * sources: [{ file: "https://hls.xtwap.top/.../index.m3u8" }].
+ */
+export async function resolveMirror(mirrorUrl) {
+  let host = '';
+  try {
+    host = new URL(mirrorUrl).hostname;
+  } catch {
+    throw new Error('Invalid mirror URL');
+  }
+  if (host.includes('blogger.com')) {
+    return { type: 'iframe', url: mirrorUrl, host };
+  }
+
+  const html = await fetchPage(mirrorUrl, { referer: `https://${host}/` });
+
+  const file =
+    html.match(/"file"\s*:\s*"([^"]+\.m3u8[^"]*)"/i)?.[1] ||
+    html.match(/"file"\s*:\s*"([^"]+\.mp4[^"]*)"/i)?.[1] ||
+    html.match(/https?:\\?\/\\?\/[^"'\s]+\.m3u8[^"'\s]*/i)?.[0];
+
+  if (!file) {
+    // Some mirrors wrap yet another iframe — surface it so the UI can embed it.
+    const inner = html.match(/<iframe[^>]+src="([^"]+)"/i)?.[1];
+    if (inner) return { type: 'iframe', url: inner, host };
+    throw new Error('No stream found in mirror');
+  }
+
+  const cleanUrl = file.replace(/\\\//g, '/');
+  return {
+    type: cleanUrl.includes('.m3u8') ? 'hls' : 'mp4',
+    url: cleanUrl,
+    host: new URL(cleanUrl).hostname,
+  };
+}

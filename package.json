@@ -1,0 +1,27 @@
+{
+  "name": "anistream",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Mobile-first anime streaming app powered by samehadaku",
+  "scripts": {
+    "dev": "concurrently -n api,web -c magenta,cyan \"node server/index.js\" \"vite\"",
+    "dev:api": "node server/index.js",
+    "dev:web": "vite",
+    "build": "vite build",
+    "start": "NODE_ENV=production node server/index.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "express": "^5.3.0",
+    "hls.js": "^1.7.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.3.0",
+    "concurrently": "^9.2.5",
+    "vite": "^8.3.8"
+  }
+}
