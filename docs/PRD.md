@@ -229,6 +229,8 @@ The user's watch history.
 
 ## 6. Design system and UX principles
 
+> **Visual source of truth (v0.3): [`docs/design/`](design/README.md).** The screen PNGs in `docs/design/screens/` and `docs/design/tokens.json` override the colours, sizes and layouts below wherever they differ. The app icon is unchanged. Downloads (`docs/design/DOWNLOADS.md`) and the schedule tab are designed but not scheduled.
+
 ### 6.1 Visual identity
 - Dark-first, cinematic. Content (artwork) is the hero and the UI chrome recedes.
 - Colour tokens, derived from the web prototype so both clients feel related:
