@@ -13,7 +13,7 @@ AniStream is an anime streaming app backed by a samehadaku scraping API.
 | `mobile/` | React Native app (Expo + TypeScript). Expo-specific rules: `mobile/AGENTS.md` | Being built, see `docs/PRD.md` |
 | `docs/PRD.md` | Product requirements and milestones | Source of truth for scope |
 
-Read `docs/PRD.md` before starting feature work. Read `README.md` for how playback and the HLS proxy work.
+Read `docs/PRD.md` before starting feature work. Read `docs/BACKEND.md` for how playback and the HLS proxy work.
 
 ## Git workflow (required)
 

@@ -1,175 +1,165 @@
+<div align="center">
+
 # AniStream
 
-A mobile-first anime streaming web app (PWA) that pulls its catalogue and video
-sources from **samehadaku.li**. Built as a reviewable prototype for a future
-mobile app — the UI is designed at phone dimensions first.
+**Anime streaming app with Indonesian subtitles. A React Native mobile app and a web prototype, backed by a samehadaku scraping API.**
 
-This project lives at **`/var/anistream`** on `waf-server`.
+[![CI](https://github.com/gafnaa/anistream/actions/workflows/ci.yml/badge.svg)](https://github.com/gafnaa/anistream/actions/workflows/ci.yml)
+[![Release](https://github.com/gafnaa/anistream/actions/workflows/release.yml/badge.svg)](https://github.com/gafnaa/anistream/actions/workflows/release.yml)
+![Expo SDK 58](https://img.shields.io/badge/Expo-SDK%2058-000020?logo=expo)
+![React Native 0.88](https://img.shields.io/badge/React%20Native-0.88-61DAFB?logo=react)
+![License: Proprietary](https://img.shields.io/badge/license-proprietary-lightgrey)
+
+</div>
 
 ---
 
-## Quick start
+## Overview
+
+AniStream lets you browse, search, and watch anime from samehadaku without its
+ads, pop-ups and desktop-first layout. The repo has three parts:
+
+| Part | Path | Stack | Status |
+|---|---|---|---|
+| **Mobile app** | [`mobile/`](mobile) | Expo SDK 58, React Native, Expo Router, TypeScript | 🚧 In development (see [PRD](docs/PRD.md)) |
+| **API** | [`server/`](server) | Node.js, Express, cheerio | ✅ Live on `waf-server` |
+| **Web prototype** | [`src/`](src) | React, Vite, hls.js (PWA) | ✅ Live, used as the reference UI |
+
+### Features
+
+- Home feed with trending titles, ongoing series, and the latest episodes, loaded as you scroll
+- Browse by status, type and order, plus live search
+- Series pages: poster, synopsis, genres, full episode list, watchlist
+- Built-in player for HLS streams (480p, 720p and 1080p), with a fallback player for embedded mirrors
+- Server switcher that moves to the next mirror on its own when one fails
+- Continue watching from where you left off, and a local watchlist, with no account needed
+
+## Architecture
+
+```
+┌──────────────────────┐
+│ Mobile app (Expo)    │──┐
+└──────────────────────┘  │  JSON + HLS   ┌──────────────────────┐  HTML / HLS  ┌──────────────┐
+                          ├─────────────▶ │ AniStream API        │ ───────────▶ │ samehadaku   │
+┌──────────────────────┐  │               │ scraper · resolver · │              │ + video CDNs │
+│ Web prototype (Vite) │──┘               │ HLS proxy            │              └──────────────┘
+└──────────────────────┘                  └──────────────────────┘
+```
+
+Both clients call the same API. Scraping and stream resolution stay on the
+server, because the video CDN only allows its own origin, which blocks direct
+browser playback, and samehadaku's markup changes often. Details are in
+[`docs/BACKEND.md`](docs/BACKEND.md).
+
+## Getting started
+
+**Requirements:** Node.js 24+, npm. For the mobile app, also an Android device
+or emulator. Use Expo Go or a development build.
+
+### API and web prototype
 
 ```bash
 npm install
-npm run dev
+npm run dev               # API → http://localhost:5178 · web → http://localhost:5177
 ```
 
-- Web UI → http://localhost:5177 (Vite, hot reload)
-- API     → http://localhost:5178
-
-For a single-port production build:
+Production (single port, detached):
 
 ```bash
-npm run build
-npm start        # serves UI + API on http://localhost:5178
+npm run build && ./start.sh   # serves UI + API on :5178
 ```
 
-Or use the helper, which rebuilds if needed and runs detached:
+### Mobile app
 
 ```bash
-./start.sh
+cd mobile
+npm install
+npx expo start            # scan the QR code with Expo Go, or press "a" for an Android emulator
 ```
 
-To view it on your phone, both servers bind to `0.0.0.0` — open
-`http://<your-lan-ip>:5177` on the device.
 
----
-
-## Accessing it over Tailscale
-
-This machine is `waf-server` on the tailnet, so the app is reachable from any
-of your devices without exposing anything publicly:
-
-| URL | Notes |
-|---|---|
-| `https://waf-server.tail1ec650.ts.net:5175` | **Use this one.** HTTPS, served through `tailscale serve` |
-| `http://100.111.3.45:5178` | Direct tailnet IP, plain HTTP |
-
-The HTTPS entry is a `tailscale serve` proxy that was already configured to
-forward port 5175 → `127.0.0.1:5178`, so it picks up this app automatically:
-
-```bash
-tailscale serve status          # view current mappings
-tailscale serve --https=443 off # (do not run — nginx owns 443 on this host)
-```
-
-Port 443 is taken by nginx on IPv4, so don't try to serve this app on 443 —
-use the 5175 entry above.
-
-
----
-
-## Screens
-
-| Route | What it does |
-|---|---|
-| `/` | Trending banner, ongoing rail, latest episode grid with infinite "load more" |
-| `/browse` | Catalogue with status / order / type filters |
-| `/search` | Debounced live search |
-| `/series/:slug` | Poster, metadata, genres, synopsis, episode list, watchlist toggle |
-| `/watch/:slug` | Player, server switcher, prev/next, full episode list, resume history |
-| `/library` | Continue-watching history + saved watchlist (localStorage) |
-
-The bottom tab bar hides on the watch screen so the player gets full width.
-
----
-
-## How the video actually plays
-
-This is the part that needed real investigation, so it's worth explaining.
-
-Each episode page on samehadaku exposes mirrors as buttons:
-
-```html
-<button class="aspd-server" data-label="HD-1" data-url="..." data-embed="<base64 iframe>">
-```
-
-Two different kinds of mirror show up in practice:
-
-**1. `play.xtwap.top/cepat2.php?url=…`** — a JW Player wrapper. Fetching it
-returns a tiny config with the real stream:
-
-```js
-sources: [{ file: "https://hls.xtwap.top/.../index.m3u8", type: "application/vnd.apple.mpegurl" }]
-```
-
-That manifest is a proper adaptive ladder (480p / 720p / 1080p), fMP4 segments.
-
-**The catch:** the CDN responds with
+## Project structure
 
 ```
-access-control-allow-origin: https://play.xtwap.top
+.
+├── mobile/                  # React Native app (Expo)
+│   ├── src/app/             #   file-based routes (Expo Router)
+│   ├── app.json · eas.json  #   app + EAS build config
+│   └── AGENTS.md            #   Expo-specific agent rules
+├── server/
+│   ├── scraper.js           # all samehadaku HTML parsing
+│   └── index.js             # Express API, mirror resolver, HLS proxy
+├── src/                     # web prototype (React + Vite)
+├── docs/
+│   ├── PRD.md               # product requirements + milestones
+│   └── BACKEND.md           # API reference, playback internals, deployment
+├── .github/workflows/       # CI + release pipelines
+├── AGENTS.md                # rules for AI agents and contributors
+└── .claude/skills/          # project workflow skill
 ```
 
-So a browser can *never* fetch these segments directly from our origin — CORS
-blocks it, and no amount of client-side code fixes that. The backend therefore
-proxies the stream:
-
-- `GET /api/resolve?mirror=…` resolves the wrapper to a direct URL
-- `GET /api/hls?url=…` fetches the manifest, **rewrites every child URI**
-  (variant playlists, `EXT-X-MAP` init segments, segments, keys) back through
-  itself, and streams the binary segments through
-
-That's why playback works in Chrome/Firefox/Safari rather than only Safari.
-
-**2. `blogger.com/video.g?token=…`** — Google's player. There's no downloadable
-manifest; it's designed to be framed. These are rendered as a sandboxed
-`<iframe>` instead. Many episodes only have this mirror, which is why the
-player supports both modes and the server buttons matter.
-
-If a stream fails, the player automatically hops to the next mirror.
-
----
-
-## API
+## API at a glance
 
 | Endpoint | Returns |
 |---|---|
-| `GET /api/home` | `{ latest[], ongoing[], trending[] }` |
+| `GET /api/home` | Latest, ongoing and trending lists |
 | `GET /api/latest?page=` | Latest episode releases |
 | `GET /api/browse?status=&type=&order=&genre=&page=` | Catalogue |
 | `GET /api/search?q=&page=` | Search results |
-| `GET /api/series/:slug` | Metadata, synopsis, genres, episodes |
-| `GET /api/episode/:slug` | Episode info + mirror list |
-| `GET /api/resolve?mirror=` | `{ type: hls\|mp4\|iframe, url, playUrl }` |
-| `GET /api/hls?url=` | Proxied manifest / segment |
+| `GET /api/series/:slug` | Series metadata and episode list |
+| `GET /api/episode/:slug` | Episode info and mirrors |
+| `GET /api/resolve?mirror=` | Playable source: `hls`, `mp4` or `iframe` |
+| `GET /api/hls?url=` | Proxied HLS manifest or segment |
 
-Responses are cached in memory (60–300s) so navigating back and forth doesn't
-re-scrape the upstream site every time.
+The full reference is in [`docs/BACKEND.md`](docs/BACKEND.md#api).
 
----
+## Development workflow
 
-## Project layout
+Every change goes on its own branch, then a pull request, then a **squash merge**.
+Nobody commits directly to `main`.
 
-```
-server/
-  scraper.js    # all samehadaku HTML parsing (cheerio)
-  index.js      # express API, HLS proxy, static serving
-src/
-  pages/        # Home, Browse, Search, Series, Watch, Library
-  components/   # Player (hls.js + iframe), Poster, TopBar, BottomNav
-  api.js        # typed-ish fetch helpers
-  storage.js    # bookmarks + history
+```bash
+git switch main && git pull --ff-only
+git switch -c feat/<short-desc>
+# ...change, then verify...
+gh pr create && gh pr merge --squash --delete-branch
 ```
 
-Scraping is deliberately isolated in `scraper.js` — samehadaku changes its
-markup occasionally, and that's the only file that should need edits when it
-does.
+The conventions and verification checklist are in [`AGENTS.md`](AGENTS.md).
 
----
+## CI/CD and releases
 
-## Notes and limits
+| Workflow | Trigger | What it does |
+|---|---|---|
+| **CI** | Every PR and every push to `main` | Builds the web app and checks the API files, then typechecks, lints, runs expo-doctor on and bundles the mobile app |
+| **Release** | Pushing a `v*` tag | Builds a signed Android APK on [EAS](https://expo.dev/eas) and publishes it as a GitHub Release |
 
-- **This is a prototype, not a product.** It scrapes a third-party site at
-  request time. Metadata, posters, and video belong to their original rights
-  holders; the app hosts nothing.
-- The site sits behind LiteSpeed + a WAF, so requests need a browser-like
-  `User-Agent` and `Referer` — a bare `fetch()` gets 403/406.
-- No auth, no database. Watchlist and history live in `localStorage`, so they're
-  per-device and per-browser.
-- Mirrors are flaky by nature — that's the site's infrastructure, not this app.
-  The server switcher and auto-fallback exist for exactly this reason.
-- If you take this to a real mobile app, the natural next step is wrapping this
-  same API in a native shell (Capacitor / React Native) rather than porting the
-  scraper — the HLS proxy has to stay server-side.
+To cut a release:
+
+```bash
+# 1. In a PR: bump "version" in mobile/app.json (e.g. 0.2.0), then squash-merge it
+# 2. Tag main with the matching version
+git switch main && git pull --ff-only
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+Download the APK from the [Releases](https://github.com/gafnaa/anistream/releases)
+page and install it on an Android device.
+
+## Documentation
+
+- [Product requirements (PRD)](docs/PRD.md): scope, screens, milestones
+- [Backend](docs/BACKEND.md): API, playback internals, deployment on `waf-server`
+- [AGENTS.md](AGENTS.md): contributor and AI agent rules
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+
+## Disclaimer
+
+AniStream hosts no content. It reads publicly available pages from a
+third-party site at request time. All titles, artwork and video belong to their
+respective rights holders. This is a private project and is not for public
+distribution.
+
+## License
+
+Proprietary. All rights reserved. See [LICENSE](LICENSE).

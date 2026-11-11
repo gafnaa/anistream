@@ -48,7 +48,7 @@ React Native while keeping all scraping and stream resolution on the server.
 ```
 
 - **Repo layout:** the app lives in a new `mobile/` folder. `server/` and the web `src/` stay where they are.
-- **Backend:** reuse the existing endpoints unchanged (see README → API). The app
+- **Backend:** reuse the existing endpoints unchanged (see `docs/BACKEND.md` → API). The app
   reads the base URL from `EXPO_PUBLIC_API_URL`. The default is the tailnet URL
   `https://waf-server.tail1ec650.ts.net:5175`.
 - **Why the scraper stays on the server:** the site sits behind a WAF that needs browser-like
