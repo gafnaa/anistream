@@ -1,5 +1,6 @@
 import { Redirect } from 'expo-router';
 import { View } from 'react-native';
+import { PalettePreview } from '@/components/PalettePreview';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { SkeletonBox, SkeletonText, PosterSkeleton, RowSkeleton, HeroSkeleton, ListItemSkeleton, SkeletonMotionControl } from '@/components/skeleton';
@@ -12,6 +13,7 @@ export default function Design() {
     {(Object.keys(typography) as TextVariant[]).map(variant => <View key={variant} style={{ gap: spacing.xs }}>
       <Text variant="caption" muted>{variant}</Text><Text variant={variant}>{t('sample')}</Text></View>)}
     <Text muted>{t('placeholder')}</Text><Text variant="caption" tabular>12:34 · 128</Text>
+    <PalettePreview />
     <Text variant="h2">{t('palette')}</Text>
     {Object.entries(colors).map(([name, value]) => <View key={name} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
       <View style={{ width: 48, height: 48, borderRadius: radius.chip, backgroundColor: value, borderWidth: 1, borderColor: colors.line }} />

@@ -1,6 +1,9 @@
 import type { TextStyle } from 'react-native';
+import { brandRamp } from './palette';
+export { brandRamp, tones, gradients, genreGradients } from './palette';
 
 export const colors = {
+  ...brandRamp, elevated: '#222838', overlay: '#2B3345', glass: 'rgba(18,21,29,0.90)',
   bg: '#0B0D12', surface: '#12151D', card: '#171B25', 'card-2': '#1E2431',
   line: '#262C3A', text: '#EEF1F7', 'text-muted': '#8B93A7', brand: '#7C5CFF',
   'brand-strong': '#6C4CF0', 'brand-2': '#4D7CFF', accent: '#FF4D6D',

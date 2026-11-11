@@ -1,3 +1,4 @@
+import { PalettePreview } from '@/components/PalettePreview';
 import { Link } from 'expo-router';
 import { Pressable } from 'react-native';
 import { Screen } from '@/components/Screen';
@@ -11,6 +12,7 @@ export default function Me() {
       style={({ pressed }) => ({ minHeight: 48, justifyContent: 'center', padding: spacing.md,
         borderRadius: radius.chip, backgroundColor: pressed ? colors['card-2'] : colors.card })}>
       <Text>{t('design')}</Text></Pressable></Link>}
+    {__DEV__ && <PalettePreview />}
     <SkeletonMotionControl><SkeletonText lines={2} /><RowSkeleton /></SkeletonMotionControl>
   </Screen>;
 }
