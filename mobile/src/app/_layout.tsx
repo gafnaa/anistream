@@ -1,3 +1,5 @@
+import '../../global.css';
+import { PortalHost } from '@rn-primitives/portal';
 import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -38,5 +40,6 @@ export default function RootLayout() {
         <Stack.Screen name="dev/design" options={{ headerShown: true, title: t('design'), headerBackTitle: t('back') }} />
       </Stack.Protected>
     </Stack>
+    <PortalHost />
   </QueryClientProvider>;
 }

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Modal, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Text } from './Text';
-import { ActionButton } from './ActionButton';
+import { RemovalDialog } from './RemovalDialog';
 import { removeHistory, type HistoryItem } from '@/storage';
 import { colors, radius } from '@/theme';
 import { t } from '@/i18n';
@@ -26,17 +26,10 @@ export function ContinueCard({ item }: { item: HistoryItem }) {
       <Text variant="title">{item.title}</Text>
       <Text variant="caption" muted tabular>E{item.episode} · {Math.ceil(Math.max(0, item.duration - item.position) / 60)} {t('minutesLeft')}</Text>
     </Pressable>
-    <Modal transparent visible={menu} animationType="fade" onRequestClose={() => setMenu(false)}>
-      <View style={{ flex: 1, backgroundColor: '#000B', justifyContent: 'center', padding: 24 }}>
-        <View accessibilityViewIsModal style={{ backgroundColor: colors.surface, padding: 24, borderRadius: radius.sheet, gap: 16 }}>
-          <Text variant="h2">{t('removeHistory')}</Text><Text>{item.title}</Text>
-          {error && <Text>{t('storageError')}</Text>}
-          <ActionButton label={t('removeHistory')} onPress={() => {
-            void removeHistory(item.episodeSlug).then(() => setMenu(false)).catch(() => setError(true));
-          }} />
-          <ActionButton label={t('cancel')} onPress={() => setMenu(false)} />
-        </View>
-      </View>
-    </Modal>
+    <RemovalDialog open={menu} onOpenChange={setMenu} title={t('removeHistory')} description={item.title}
+      error={error} onRemove={() => {
+        setError(false);
+        void removeHistory(item.episodeSlug).then(() => setMenu(false)).catch(() => setError(true));
+      }} />
   </View>;
 }

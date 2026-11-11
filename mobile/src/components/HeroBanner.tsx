@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { RemovalDialog } from './RemovalDialog';
 import { Image } from 'expo-image';
 import { ArtworkBackdrop } from './ArtworkBackdrop';
 import { router } from 'expo-router';
@@ -74,16 +75,8 @@ export function HeroBanner({ items }: { items: TrendingCard[] }) {
         </Pressable>}
       </View>
     </View>
-    <Modal transparent visible={confirmRemoval} animationType="fade" onRequestClose={() => setConfirmRemoval(false)}>
-      <View style={{ flex: 1, backgroundColor: '#000B', justifyContent: 'center', padding: 24 }}>
-        <View accessibilityViewIsModal style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 24, gap: 16 }}>
-          <Text variant="h2">{t('removeBookmark')}</Text>
-          {storageError && <Text>{t('storageError')}</Text>}
-          <ActionButton label={t('removeBookmark')} onPress={toggle} />
-          <ActionButton label={t('cancel')} onPress={() => setConfirmRemoval(false)} />
-        </View>
-      </View>
-    </Modal>
+    <RemovalDialog open={confirmRemoval} onOpenChange={setConfirmRemoval} title={t('removeBookmark')}
+      description={item.title} error={storageError} onRemove={toggle} />
   </View>;
 }
 const styles = StyleSheet.create({

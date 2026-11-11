@@ -13,18 +13,19 @@ const check = (name, foreground, background) => {
   if (value < 4.5) throw new Error(`${name} fails AA`);
 };
 const text = rgb('#EEF1F7');
-const muted = rgb('#8B93A7');
-for (const surface of ['#0B0D12', '#12151D', '#171B25', '#1E2431', '#222838']) {
+const muted = rgb('#9299AD');
+check('white on primary button', rgb('#FFFFFF'), rgb('#E11D48'));
+for (const surface of ['#0B0D12', '#13151C', '#1A1C24', '#23262F', '#242630']) {
   check(`primary on ${surface}`, text, rgb(surface));
   check(`muted on ${surface}`, muted, rgb(surface));
 }
-check('primary on overlay', text, rgb('#2B3345'));
-const glass = composite(rgb('#12151D'), rgb('#FFFFFF'), 0.9);
+check('primary on overlay', text, rgb('#2C2F3A'));
+const glass = composite(rgb('#13151C'), rgb('#FFFFFF'), 0.92);
 check('muted on glass over white', muted, glass);
 check('primary on glass over white', text, glass);
 for (const [name, tone] of Object.entries(tones)) {
   check(`${name} solid`, rgb('#0B0D12'), rgb(tone.solid));
-  for (const surface of ['#0B0D12', '#12151D', '#222838', '#2B3345']) {
+  for (const surface of ['#0B0D12', '#13151C', '#242630', '#2C2F3A']) {
     check(`${name} subtle on ${surface}`, text, composite(rgb(tone.solid), rgb(surface), 31 / 255));
   }
 }

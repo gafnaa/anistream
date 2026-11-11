@@ -3,6 +3,7 @@ import { ActionButton } from '@/components/ActionButton';
 import { Redirect } from 'expo-router';
 import { View } from 'react-native';
 import { PalettePreview } from '@/components/PalettePreview';
+import { ReusablesPreview } from '@/components/ReusablesPreview';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { SkeletonBox, SkeletonText, PosterSkeleton, RowSkeleton, HeroSkeleton, ListItemSkeleton, SkeletonMotionControl } from '@/components/skeleton';
@@ -12,6 +13,7 @@ export default function Design() {
   const seed = useSeedHistory();
   if (!__DEV__) return <Redirect href="/" />;
   return <Screen title={t('design')} preview={false}>
+    <ReusablesPreview />
     <ActionButton label={t('seedHistory')} onPress={() => seed.mutate()} />
     {seed.isSuccess && <Text>{t('seeded')}</Text>}
     {seed.isError && <Text>{t('storageError')}</Text>}

@@ -1,5 +1,9 @@
 import { useMemo, useState } from 'react';
-import { FlatList, Modal, PixelRatio, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { FlatList, PixelRatio, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { RemovalDialog } from './RemovalDialog';
+import { Toggle } from './ui/toggle';
+import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
+import { Separator } from './ui/separator';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -126,19 +130,22 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
         <View style={{ paddingHorizontal: 24, paddingBottom: 16, gap: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <Text variant="h2" accessibilityRole="header">{t('episodesHeading')}</Text>
-            <ActionButton label={t(descending ? 'descending' : 'ascending')} onPress={() => {
-              sessionDescending = !descending;
-              setDescending(sessionDescending);
-            }} />
+            <Toggle pressed={descending} onPressedChange={value => {
+              sessionDescending = value;
+              setDescending(value);
+            }} accessibilityLabel={t(descending ? 'descending' : 'ascending')}>
+              <Text variant="caption">{t(descending ? 'descending' : 'ascending')}</Text>
+            </Toggle>
           </View>
           {hasRanges && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {Array.from({ length: Math.ceil(episodes.length / 50) }, (_, index) => <Pressable key={index}
-              accessibilityRole="button" accessibilityState={{ selected: selectedRange === index }}
-              onPress={() => setRange(index)} style={({ pressed }) => ({ minHeight: 48, minWidth: 64,
-                paddingHorizontal: 12, justifyContent: 'center', borderRadius: radius.chip,
-                backgroundColor: selectedRange === index ? colors.overlay : colors.card, opacity: pressed ? 0.65 : 1 })}>
+            <ToggleGroup type="single" value={String(selectedRange)} onValueChange={value => {
+              if (value) setRange(Number(value));
+            }} className="gap-2">
+            {Array.from({ length: Math.ceil(episodes.length / 50) }, (_, index) => <ToggleGroupItem key={index}
+              value={String(index)} className="rounded-sm px-3">
               <Text variant="caption" tabular>{rangeLabel(episodes, index)}</Text>
-            </Pressable>)}
+            </ToggleGroupItem>)}
+            </ToggleGroup>
           </ScrollView>}
         </View>
       </View>}
@@ -152,7 +159,8 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
           accessibilityLabel={`${t('episodeLabel')} ${item.number ?? ''}, ${item.title}${progress > 0 ? `, ${t(watched ? 'watched' : 'inProgress')}` : ''}`}
           onPress={() => router.push({ pathname: '/watch/[slug]', params: { slug: item.slug } })}
           style={({ pressed }) => ({ marginHorizontal: 24, paddingVertical: 16, gap: 8,
-            borderTopWidth: 1, borderColor: colors.line, opacity: pressed ? 0.65 : 1 })}>
+            opacity: pressed ? 0.65 : 1 })}>
+          <Separator />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <View style={{ width: 48, minHeight: 48, borderRadius: radius.chip, backgroundColor: colors.card, justifyContent: 'center', alignItems: 'center' }}>
               <Text variant="title" tabular>{item.number ?? '▶'}</Text>
@@ -178,16 +186,8 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
         void Share.share({ message: `anistream://series/${series.slug}` }).catch(() => setShareError(true));
       }} />
     </View>
-    <Modal transparent visible={confirmRemoval} onRequestClose={() => setConfirmRemoval(false)}>
-      <View style={{ flex: 1, backgroundColor: '#000B', justifyContent: 'center', padding: 24 }}>
-        <View accessibilityViewIsModal style={{ backgroundColor: colors.surface, padding: 24, borderRadius: radius.sheet, gap: 16 }}>
-          <Text variant="h2">{t('removeBookmark')}</Text>
-          {storageError && <Text>{t('storageError')}</Text>}
-          <ActionButton label={t('removeBookmark')} onPress={toggle} />
-          <ActionButton label={t('cancel')} onPress={() => setConfirmRemoval(false)} />
-        </View>
-      </View>
-    </Modal>
+    <RemovalDialog open={confirmRemoval} onOpenChange={setConfirmRemoval} title={t('removeBookmark')}
+      description={series.title} error={storageError} onRemove={toggle} />
   </View>;
 }
 export function SeriesSkeleton() {

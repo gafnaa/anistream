@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { Pressable } from 'react-native';
+import { Card } from './ui/card';
 import { Text } from './Text';
 import { colors, radius } from '@/theme';
 
@@ -11,9 +12,9 @@ export function openCard(item: CardItem) {
 export function PosterCard({ item }: { item: CardItem }) {
   return <Pressable accessibilityRole="button" accessibilityLabel={item.title} onPress={() => openCard(item)}
     style={({ pressed }) => ({ width: 96, opacity: pressed ? 0.7 : 1, gap: 8 })}>
-    <View style={{ width: 96, height: 144, backgroundColor: colors.card, borderRadius: radius.card, overflow: 'hidden' }}>
+    <Card className="gap-0 border-0 p-0 shadow-none" style={{ width: 96, height: 144, backgroundColor: colors.card, borderRadius: radius.card, overflow: 'hidden' }}>
       <Image source={item.image} contentFit="cover" transition={200} style={{ width: '100%', height: '100%' }} />
-    </View>
+    </Card>
     <Text variant="caption" numberOfLines={2} style={{ minHeight: 32 }}>{item.title}</Text>
   </Pressable>;
 }
