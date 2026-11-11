@@ -1,1 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><defs><linearGradient id="brand" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#7C5CFF"/><stop offset="1" stop-color="#4D7CFF"/></linearGradient></defs><path fill="url(#brand)" d="M0 0H1024V1024H0Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><defs>
+<linearGradient id="base" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#20203F"/><stop offset=".48" stop-color="#101426"/><stop offset="1" stop-color="#080C18"/></linearGradient>
+<radialGradient id="violet" cx=".12" cy=".08" r="1"><stop stop-color="#7C5CFF" stop-opacity=".65"/><stop offset="1" stop-color="#7C5CFF" stop-opacity="0"/></radialGradient>
+<radialGradient id="pink" cx="1" cy="1" r=".9"><stop stop-color="#FF4D6D" stop-opacity=".34"/><stop offset="1" stop-color="#FF4D6D" stop-opacity="0"/></radialGradient>
+</defs><path fill="url(#base)" d="M0 0H1024V1024H0Z"/><path fill="url(#violet)" d="M0 0H1024V1024H0Z"/><path fill="url(#pink)" d="M0 0H1024V1024H0Z"/></svg>

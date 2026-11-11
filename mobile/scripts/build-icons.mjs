@@ -16,7 +16,7 @@ for (const [name, svg, size, opaque] of [
   ['icon', 'icon', 1024, true],
   ['android-icon-foreground', 'mark', 1024, false],
   ['android-icon-background', 'background', 1024, true],
-  ['android-icon-monochrome', 'mark', 1024, false],
+  ['android-icon-monochrome', 'monochrome', 1024, false],
   ['splash-icon', 'mark', 1024, false],
   ['favicon', 'icon', 48, true],
 ]) {
