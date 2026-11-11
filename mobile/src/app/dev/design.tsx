@@ -1,3 +1,5 @@
+import { useSeedHistory } from '@/storage/seed';
+import { ActionButton } from '@/components/ActionButton';
 import { Redirect } from 'expo-router';
 import { View } from 'react-native';
 import { PalettePreview } from '@/components/PalettePreview';
@@ -7,8 +9,12 @@ import { SkeletonBox, SkeletonText, PosterSkeleton, RowSkeleton, HeroSkeleton, L
 import { colors, radius, spacing, typography, type TextVariant } from '@/theme';
 import { t } from '@/i18n';
 export default function Design() {
+  const seed = useSeedHistory();
   if (!__DEV__) return <Redirect href="/" />;
   return <Screen title={t('design')} preview={false}>
+    <ActionButton label={t('seedHistory')} onPress={() => seed.mutate()} />
+    {seed.isSuccess && <Text>{t('seeded')}</Text>}
+    {seed.isError && <Text>{t('storageError')}</Text>}
     <Text variant="h2">{t('typography')}</Text>
     {(Object.keys(typography) as TextVariant[]).map(variant => <View key={variant} style={{ gap: spacing.xs }}>
       <Text variant="caption" muted>{variant}</Text><Text variant={variant}>{t('sample')}</Text></View>)}
