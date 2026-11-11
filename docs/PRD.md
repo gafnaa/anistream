@@ -40,7 +40,6 @@ AniStream uses these as interaction patterns only. It has its own visual identit
 
 ### Non-goals (v1)
 - User accounts, cloud sync, multiple profiles, comments, ratings.
-- Offline downloads.
 - Push notifications. This is a v2 candidate, see §10.
 - Running the scraper on the device. The scraper stays server-side.
 - Publishing to the Play Store or App Store. v1 ships as a sideloaded APK through the release pipeline.
@@ -229,7 +228,7 @@ The user's watch history.
 
 ## 6. Design system and UX principles
 
-> **Visual source of truth (v0.3): [`docs/design/`](design/README.md).** The screen PNGs in `docs/design/screens/` and `docs/design/tokens.json` override the colours, sizes and layouts below wherever they differ. The app icon is unchanged. Downloads (`docs/design/DOWNLOADS.md`) and the schedule tab are designed but not scheduled.
+> **Visual source of truth (v0.3): [`docs/design/`](design/README.md).** The screen PNGs in `docs/design/screens/` and `docs/design/tokens.json` override the colours, sizes and layouts below wherever they differ. The app icon is unchanged. Downloads (`docs/design/DOWNLOADS.md`) are scheduled in M9 and the schedule tab in M8.
 
 ### 6.1 Visual identity
 - Dark-first, cinematic. Content (artwork) is the hero and the UI chrome recedes.
@@ -365,10 +364,11 @@ Each milestone is one or more PRs (see AGENTS.md → Git workflow).
 | M5 | **Discover, Search, Genre results** + `/api/genres` | You can find any show by genre or name in 3 taps or fewer |
 | M6 | **New + History + My Space** (+ schedule spike) | All five tabs complete |
 | M7 | **Settings, onboarding, offline/error states, deep links, icon/splash** | v0.x APK released and reviewed on a real phone |
+| M8 | **Schedule**: `GET /api/schedule` scraped from samehadaku's weekly schedule (cached) + the *Jadwal tayang* segment on New (`schedule.png`): Mon–Sun day picker, today selected, series airing that day with time and My List marker | The schedule for every weekday matches samehadaku's page; tapping a show opens its detail |
+| M9 | **Downloads** (`downloads*.png`, `DOWNLOADS.md`): download button on detail/episode rows, quality sheet, queue (progress, ETA, pause, resume, retry), Wi-Fi-only on by default, ready-to-watch list in My Space → Unduhan, delete with confirmation, offline playback in the player. HLS episodes are saved as local segments + rewritten playlist (or MP4 where the mirror is a file); iframe-only mirrors can't be downloaded and the button says so | An HLS episode downloads, survives an app restart mid-download, and plays in airplane mode |
 
 ## 10. Future (v2+)
 - Push notifications for new episodes of shows in My List (server cron + Expo push).
-- Offline downloads (HLS → local MP4, which depends on the mirror).
 - Accounts and multiple profiles, with sync between web and mobile.
 - Chromecast / AirPlay.
 - Persistent server deployment: a systemd unit, then a public host with auth or rate limiting.
