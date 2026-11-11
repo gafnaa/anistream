@@ -5,6 +5,8 @@ export type CatalogueCard = {
   slug: string; title: string; image: string | null; kind: 'series' | 'episode';
   episodeTitle: string | null; type: string | null; status: string | null;
   episode: number | null; url: string;
+  /** ISO time from samehadaku's RSS feed; /api/latest only, when found. */
+  releasedAt?: string;
 };
 export type HomeResponse = {
   latest: CatalogueCard[]; ongoing: CatalogueCard[]; trending: TrendingCard[];
