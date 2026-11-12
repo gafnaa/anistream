@@ -122,6 +122,7 @@ const en = {
   removeSearch: "Remove search",
   moreLikeThis: "More like this",
 
+  skipIntro: 'Skip intro', skipEnding: 'Skip ending', skipRecap: 'Skip recap', skipForward85: '+85 sec',
   toggleControls: 'Show playback controls',
   servers: 'Servers',
   chooseServer: 'Choose a server',
@@ -330,6 +331,7 @@ const id: Dictionary = {
   removeSearch: "Hapus pencarian",
   moreLikeThis: "Tontonan serupa",
 
+  skipIntro: 'Lewati intro', skipEnding: 'Lewati ending', skipRecap: 'Lewati rekap', skipForward85: '+85 dtk',
   toggleControls: 'Tampilkan kontrol pemutaran',
   servers: 'Server',
   chooseServer: 'Pilih server',

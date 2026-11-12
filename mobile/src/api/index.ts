@@ -32,6 +32,12 @@ export function useSearch(q: string) {
     queryFn: ({ pageParam, signal }) => apiGet<SearchResponse>('/api/search', { q: query, page: pageParam }, signal),
     getNextPageParam: last => last.hasNext ? last.page + 1 : undefined });
 }
+export function useSkipTimes(title: string | null | undefined, episode: number | undefined, duration: number) {
+  const roundedDuration = Number.isFinite(duration) ? Math.max(0, Math.round(duration)) : 0;
+  return useQuery({ queryKey: ['skip', title, episode, roundedDuration],
+    enabled: !!title && Number.isFinite(episode) && episode! > 0, staleTime: 86_400_000, retry: false,
+    queryFn: ({ signal }) => apiGet<import('./types').SkipTimes>('/api/skip', { title: title!, episode, duration: roundedDuration }, signal) });
+}
 export function useBrowse(params: BrowseParams = {}, enabled = true) {
   return useInfiniteQuery({ queryKey: ['browse', params], enabled, initialPageParam: params.page ?? 1,
     queryFn: ({ pageParam, signal }) => apiGet<PageResponse>('/api/browse', { ...params, page: pageParam }, signal),

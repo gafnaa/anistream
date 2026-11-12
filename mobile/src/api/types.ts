@@ -30,6 +30,7 @@ export type EpisodeResponse = {
 export type BrowseParams = { status?: string; type?: string; order?: string; genre?: string; page?: number };
 
 export type ResolvedSource = { type: 'hls' | 'mp4' | 'iframe'; url: string; playUrl?: string };
+export type SkipTimes = { malId: number | null; intervals: { type: 'op' | 'ed' | 'recap'; start: number; end: number }[] };
 
 export type ScheduleItem = { seriesSlug: string; title: string; image: string | null; time: string; episode: number | null; released: boolean; episodeSlug?: string };
 export type ScheduleResponse = { timezone: 'Asia/Jakarta'; generatedAt: string; days: { weekday: number; items: ScheduleItem[] }[] };
