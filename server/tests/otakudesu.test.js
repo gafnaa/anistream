@@ -87,3 +87,9 @@ test('a shorter otakudesu title matches only as a whole-word prefix with the sam
   assert.equal(titleMatchScore(normalizeAnimeTitle('Kyouran Reijou Nia'), normalizeAnimeTitle('Kyouran Reijou Niama')), 0);
   assert.equal(titleMatchScore(normalizeAnimeTitle('One Piece'), normalizeAnimeTitle('One Piece Film Red')), 0);
 });
+
+test('accepts Otakudesu MP4s hosted on archive.org', async () => {
+  const mp4 = 'https://archive.org/download/item/Otakudesu.io_X--01_720p.mp4';
+  assert.deepEqual(await resolveMirror(mp4), { type: 'mp4', url: mp4 });
+  await assert.rejects(resolveMirror('https://archive.org/details/item'), /embed host/);
+});

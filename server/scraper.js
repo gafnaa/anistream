@@ -443,7 +443,8 @@ async function matchOtakudesu(title, signal) {
 async function resolveOdEmbed(url, signal, depth = 0) {
   const parsed = new URL(url);
   if (!/^https?:$/.test(parsed.protocol)) throw new Error('Invalid embed protocol');
-  if (/\.(mp4|m3u8)$/i.test(parsed.pathname) && /(^|\.)odcloud\.net$/i.test(parsed.hostname)) {
+  // Otakudesu hosts its files on its own CDN and, for some episodes, on archive.org.
+  if (/\.(mp4|m3u8)$/i.test(parsed.pathname) && /(^|\.)(odcloud\.net|archive\.org)$/i.test(parsed.hostname)) {
     return { type: parsed.pathname.endsWith('.mp4') ? 'mp4' : 'hls', url };
   }
   // Only inspect the verified public player. Other hosts may require challenges.
@@ -599,7 +600,7 @@ export async function resolveMirror(mirrorUrl) {
   } catch {
     throw new Error('Invalid mirror URL');
   }
-  if (/(^|\.)(desustream.net|odcloud.net)$/.test(host)) {
+  if (/(^|\.)(desustream\.net|odcloud\.net|archive\.org)$/.test(host)) {
     return resolveOdEmbed(mirrorUrl, AbortSignal.timeout(6000));
   }
   if (host.includes('blogger.com')) {
