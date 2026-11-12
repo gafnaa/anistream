@@ -1,4 +1,5 @@
 import express from 'express';
+import { latestRelease, latestApk } from './update.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -84,6 +85,19 @@ const wrap = (fn) => (req, res) => {
 /* ------------------------------------------------------------------ */
 /* API routes                                                          */
 /* ------------------------------------------------------------------ */
+app.get('/api/app/latest', wrap(async (req, res) => {
+  res.json((await latestRelease()).payload);
+}));
+
+app.get('/api/app/apk', wrap(async (req, res) => {
+  const apk = await latestApk();
+  res.type('application/vnd.android.package-archive');
+  res.attachment(apk.name);
+  res.sendFile(apk.file, { dotfiles: 'allow' }, err => {
+    if (err && !res.headersSent) res.status(err.status || 502).json({ error: 'APK could not be served' });
+  });
+}));
+
 app.get('/api/home', wrap(async (req, res) => {
   res.json(await cached('home', TTL.home, getHome));
 }));

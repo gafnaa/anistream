@@ -9,6 +9,10 @@ export function createQueryClient() {
 export function useHome() {
   return useQuery({ queryKey: ['home'], queryFn: ({ signal }) => apiGet<HomeResponse>('/api/home', {}, signal) });
 }
+export function useAppLatest(enabled = false) {
+  return useQuery({ queryKey: ['app-latest'], enabled, retry: false, staleTime: 600_000,
+    queryFn: ({ signal }) => apiGet<import('./types').AppRelease>('/api/app/latest', {}, signal) });
+}
 export function useLatest(page = 1) {
   return useInfiniteQuery({ queryKey: ['latest', page], initialPageParam: page,
     queryFn: ({ pageParam, signal }) => apiGet<PageResponse>('/api/latest', { page: pageParam }, signal),

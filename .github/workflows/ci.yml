@@ -21,8 +21,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - run: node --test server/tests/*.test.js
       - name: API modules load
-        run: node --check server/index.js && node --check server/scraper.js
+        run: node --check server/index.js && node --check server/scraper.js && node --check server/update.js
 
   mobile:
     name: Mobile
@@ -43,6 +44,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:downloads
+      - run: npm run test:update
       - run: npx -y expo-doctor@1.21.6  # 1.21.7 (2026-11-11) ships without @expo/env and crashes; unpin once fixed
       - name: Bundle Android JS
         run: npx expo export --platform android --output-dir /tmp/expo-export

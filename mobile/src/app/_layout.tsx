@@ -1,4 +1,5 @@
 import '../../global.css';
+import { UpdateProvider } from '@/update/UpdateProvider';
 import { startDownloadEngine } from '@/downloads/engine';
 import { PortalHost } from '@rn-primitives/portal';
 import { useEffect, useState, useSyncExternalStore } from 'react';
@@ -61,6 +62,7 @@ export default function RootLayout() {
   if (error) throw error;
   if (!loaded || !hydrated || !settingsHydrated || deepLink === null) return null;
   return <QueryClientProvider client={queryClient}>
+    <UpdateProvider ready={settings.onboarded}>
     <StatusBar style="light" />
     {!settings.onboarded && !deepLink && launchPath === '/' ? <Onboarding /> : <Stack key={settings.language} screenOptions={{ headerShown: false, orientation: 'portrait', contentStyle: { backgroundColor: colors.bg },
       headerStyle: { backgroundColor: colors.surface }, headerTintColor: colors.text }}>
@@ -76,6 +78,7 @@ export default function RootLayout() {
     </Stack>}
     <Connectivity />
     <PortalHost />
+    </UpdateProvider>
   </QueryClientProvider>;
 }
 

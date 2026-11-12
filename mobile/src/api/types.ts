@@ -33,3 +33,5 @@ export type ResolvedSource = { type: 'hls' | 'mp4' | 'iframe'; url: string; play
 
 export type ScheduleItem = { seriesSlug: string; title: string; image: string | null; time: string; episode: number | null; released: boolean; episodeSlug?: string };
 export type ScheduleResponse = { timezone: 'Asia/Jakarta'; generatedAt: string; days: { weekday: number; items: ScheduleItem[] }[] };
+
+export type AppRelease = { version: string; tag: string; notes: string; publishedAt: string; size: number; apkUrl: string };
