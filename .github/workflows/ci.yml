@@ -44,6 +44,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:downloads
+      - run: npm run test:api
       - run: npm run test:update
       - run: npx -y expo-doctor@1.21.6  # 1.21.7 (2026-11-11) ships without @expo/env and crashes; unpin once fixed
       - name: Bundle Android JS

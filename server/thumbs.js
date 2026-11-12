@@ -105,6 +105,8 @@ function pump() {
 export function getThumb(slug, base) {
   const file = thumbPath(slug);
   if (fs.existsSync(file)) return Promise.resolve(file);
+  // Mirainime signs every episode request; browsing rows must not consume its playback quota.
+  if (slug.startsWith('mn~')) return Promise.reject(new Error('Thumbnail unavailable'));
   const failedAt = failures.get(slug);
   if (failedAt && Date.now() - failedAt < FAIL_TTL) return Promise.reject(new Error('Thumbnail unavailable'));
   if (!jobs.has(slug)) {
