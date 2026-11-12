@@ -1,7 +1,8 @@
 import { DownloadButton } from './DownloadButton';
+import { Press } from '@/components/Press';
 import { BrowseNavigation } from '@/components/BrowseNavigation';
 import { useMemo, useState } from 'react';
-import { FlatList, PixelRatio, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { FlatList, PixelRatio, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { RemovalDialog } from './RemovalDialog';
 import { Toggle } from './ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
@@ -43,10 +44,10 @@ export function SeriesBackButton() {
 function IconButton({ label, icon, onPress }: {
   label: string; icon: string; onPress: () => void;
 }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress}
+  return <Press accessibilityRole="button" accessibilityLabel={label} onPress={onPress}
     style={({ pressed }) => [styles.icon, { opacity: pressed ? 0.65 : 1 }]}>
     <Icon name={icon} size={24} color={colors.text} />
-  </Pressable>;
+  </Press>;
 }
 function Synopsis({ text }: { text: string | null }) {
   const [expanded, setExpanded] = useState(false);
@@ -58,11 +59,11 @@ function Synopsis({ text }: { text: string | null }) {
         onLayout={event => setOverflows(event.nativeEvent.layout.height > 66 * Math.min(1.3, PixelRatio.getFontScale()) + 1)}
         style={{ position: 'absolute', left: 0, right: 0, top: 0, opacity: 0, zIndex: -1 }}>{text || t('noSynopsis')}</Text>
     </View>
-    {overflows && <Pressable accessibilityRole="button" accessibilityState={{ expanded }}
+    {overflows && <Press accessibilityRole="button" accessibilityState={{ expanded }}
       onPress={() => setExpanded(value => !value)}
       style={({ pressed }) => ({ minHeight: 48, alignSelf: 'flex-start', justifyContent: 'center', opacity: pressed ? 0.65 : 1 })}>
       <Text variant="title">{t(expanded ? 'less' : 'more')}</Text>
-    </Pressable>}
+    </Press>}
   </View>;
 }
 export function SeriesDetail({ series }: { series: SeriesResponse }) {
@@ -128,9 +129,9 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {series.genres.map(name => {
                 const link = series.genreLinks?.find(item => item.name === name);
-                return <Button key={name} variant="secondary" size="sm" style={{ flex: 1, borderRadius: 6 }}
+                return <Button key={name} variant="secondary" size="sm" style={{ borderRadius: 6 }}
                   onPress={() => link && router.push({ pathname: '/genre/[slug]', params: { slug: link.slug } })}>
-                  <Text variant="caption">{name}</Text>
+                  <Text variant="caption" numberOfLines={1}>{name}</Text>
                 </Button>;
               })}
             </View>
@@ -173,11 +174,13 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: insets.top + 8, paddingBottom: 8, paddingHorizontal: 16, zIndex: 10, backgroundColor: scrolled ? colors.bg : 'transparent', flexDirection: 'row', justifyContent: 'space-between' }}>
       <SeriesBackButton />
       {scrolled && <Text variant="title" numberOfLines={1} style={{ flex: 1, alignSelf: 'center', marginHorizontal: 12 }}>{series.title}</Text>}
-      {target && <DownloadButton metadata={{ slug: target, seriesSlug: series.slug, seriesTitle: series.title, episode: episodes.find(item => item.slug === target)?.number ?? '', poster: series.image ?? '' }} />}
-      <IconButton label={t('share')} icon="share-outline" onPress={() => {
-        setShareError(false);
-        void Share.share({ message: `anistream://series/${series.slug}` }).catch(() => setShareError(true));
-      }} />
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        {target && <DownloadButton metadata={{ slug: target, seriesSlug: series.slug, seriesTitle: series.title, episode: episodes.find(item => item.slug === target)?.number ?? '', poster: series.image ?? '' }} />}
+        <IconButton label={t('share')} icon="share-outline" onPress={() => {
+          setShareError(false);
+          void Share.share({ message: `anistream://series/${series.slug}` }).catch(() => setShareError(true));
+        }} />
+      </View>
     </View>
     <BrowseNavigation selected="home" />
     <RemovalDialog open={confirmRemoval} onOpenChange={setConfirmRemoval} title={t('removeBookmark')}

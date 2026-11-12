@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Press } from '@/components/Press';
 import { ActivityIndicator, AppState, Pressable, StyleSheet, View } from 'react-native';
 import { useVideoPlayer, VideoView, type VideoPlayer } from 'expo-video';
 import { useFocusEffect } from 'expo-router';
@@ -147,7 +148,7 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
     </View>
     {buffering && <ActivityIndicator pointerEvents="none" color={colors.text} style={StyleSheet.absoluteFill} />}
     {!!ripple && <View pointerEvents="none" style={{ position: 'absolute', top: '38%', left: ripple < 0 ? '12%' : '70%', backgroundColor: '#FFFFFF33', borderRadius: 48, padding: 18 }}><Text tabular>{ripple > 0 ? '+10' : '−10'}</Text></View>}
-    {(skipInterval || fallbackSkip) && <Pressable accessibilityRole="button" accessibilityLabel={skipLabel}
+    {(skipInterval || fallbackSkip) && <Press accessibilityRole="button" accessibilityLabel={skipLabel}
       onPress={() => {
         const target = Math.min(duration, skipInterval?.end ?? player.currentTime + 85);
         seekTo(player, target);
@@ -156,7 +157,7 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
       <View style={{ height: skipInterval ? 40 : 32, borderRadius: 20, paddingHorizontal: 18, justifyContent: 'center', backgroundColor: 'rgba(11,13,18,0.85)' }}>
         <Text style={{ color: '#FFFFFF', fontSize: 14 }}>{skipLabel}</Text>
       </View>
-    </Pressable>}
+    </Press>}
     {visible && <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
       {children}
       <View style={{ position: 'absolute', top: '38%', alignSelf: 'center' }}>

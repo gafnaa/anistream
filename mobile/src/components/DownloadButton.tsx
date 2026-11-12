@@ -27,10 +27,8 @@ function NativeDownloadButton({ metadata }: { metadata: DownloadMetadata }) {
     <Button variant="ghost" size="icon" disabled={unavailable || query.isPending || exists}
       accessibilityLabel={t(unavailable ? 'downloadUnavailable' : exists ? 'downloadAdded' : 'downloadEpisode')}
       accessibilityHint={unavailable ? t('downloadUnavailable') : undefined} onPress={() => { if (query.isError) void query.refetch(); else setOpen(true); }}>
-      <Download size={24} color={colors.text} />
+      <Download size={24} color={unavailable ? colors['text-muted'] : colors.text} />
     </Button>
-    {unavailable && <Text variant="caption" muted style={{ maxWidth: 120 }}>{t('downloadUnavailable')}</Text>}
-    {query.isError && <Text variant="caption" muted>{t('retry')}</Text>}
     <DownloadQualitySheet open={open} onClose={() => setOpen(false)} metadata={metadata} />
   </View>;
 }

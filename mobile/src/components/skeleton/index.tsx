@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
-import { Pressable, View, StyleSheet, type DimensionValue, type ViewStyle } from 'react-native';
+import { Press } from '@/components/Press';
+import { View, StyleSheet, type DimensionValue, type ViewStyle } from 'react-native';
 import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { colors, radius, spacing } from '@/theme';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,11 +13,11 @@ export function SkeletonMotionControl({ children, floatingControl = false, overl
   const reducedMotion = useReducedMotion();
   if (reducedMotion) return <MotionContext.Provider value={false}>{children}</MotionContext.Provider>;
   return <MotionContext.Provider value={running}>
-    <Pressable accessibilityRole="button" onPress={() => setRunning(value => !value)}
+    <Press accessibilityRole="button" onPress={() => setRunning(value => !value)}
       style={({ pressed }) => [styles.control, floatingControl && { position: 'absolute', top: -72, right: 0, zIndex: 1 },
         overlayControl && { position: 'absolute', top: 8, right: 8, zIndex: 1, backgroundColor: colors.surface }, { opacity: pressed ? 0.7 : 1 }]}>
       <Text variant="caption">{t(running ? 'pause' : 'resume')}</Text>
-    </Pressable>
+    </Press>
     {children}
   </MotionContext.Provider>;
 }

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type RefObject, type ComponentRef } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Press } from '@/components/Press';
+import { Platform, StyleSheet, View } from 'react-native';
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import { BlurView } from 'expo-blur';
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
@@ -40,7 +41,7 @@ export function GlassTabBar({ state, descriptors, emitter, navigateToTab }: Bott
           const { options } = descriptors[route.key];
           const focused = state.index === index;
           const label = options.title ?? route.name;
-          return <Pressable key={route.key} accessibilityRole="tab" accessibilityState={{ selected: focused }} aria-selected={focused}
+          return <Press key={route.key} accessibilityRole="tab" accessibilityState={{ selected: focused }} aria-selected={focused}
             onFocus={() => setFocusedTab(route.key)} onBlur={() => setFocusedTab(null)}
             accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
             onPress={() => {
@@ -54,7 +55,7 @@ export function GlassTabBar({ state, descriptors, emitter, navigateToTab }: Bott
               }]}>
             {focused && <View style={{ position: 'absolute', bottom: 0, width: 5, height: 3, borderRadius: 2, backgroundColor: colors.brand }} />}
             {options.tabBarIcon?.({ focused, color: focused ? colors.text : colors['text-muted'], size: 24 })}
-          </Pressable>;
+          </Press>;
         })}
       </View>
     </View>

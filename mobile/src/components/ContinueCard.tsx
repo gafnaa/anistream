@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { Press } from '@/components/Press';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { Text } from './Text';
 import { RemovalDialog } from './RemovalDialog';
 import { removeHistory, type HistoryItem } from '@/storage';
@@ -13,7 +14,7 @@ export function ContinueCard({ item }: { item: HistoryItem }) {
   const [error, setError] = useState(false);
   const progress = item.duration > 0 ? Math.min(1, Math.max(0, item.position / item.duration)) : 0;
   return <View style={{ width: 216 }}>
-    <Pressable accessibilityRole="button" accessibilityLabel={`${item.title}, E${item.episode}, ${t('continueWatching')}`}
+    <Press accessibilityRole="button" accessibilityLabel={`${item.title}, E${item.episode}, ${t('continueWatching')}`}
       accessibilityHint={t('historyHint')} onLongPress={() => setMenu(true)}
       onPress={() => router.push({ pathname: '/watch/[slug]', params: { slug: item.episodeSlug } })}
       style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, gap: 8 })}>
@@ -25,7 +26,7 @@ export function ContinueCard({ item }: { item: HistoryItem }) {
       </View>
       <Text variant="title">{item.title}</Text>
       <Text variant="caption" muted tabular>E{item.episode} · {Math.ceil(Math.max(0, item.duration - item.position) / 60)} {t('minutesLeft')}</Text>
-    </Pressable>
+    </Press>
     <RemovalDialog open={menu} onOpenChange={setMenu} title={t('removeHistory')} description={item.title}
       error={error} onRemove={() => {
         setError(false);

@@ -1,7 +1,8 @@
 import { useOffline, OfflineState } from '@/components/Connectivity';
+import { Press } from '@/components/Press';
 import { AmbientBackground } from '@/components/AmbientBackground';
 import { useMemo, useState } from 'react';
-import { Animated, Pressable, RefreshControl, View } from 'react-native';
+import { Animated, RefreshControl, View } from 'react-native';
 import { router } from 'expo-router';
 import Icon from '@/components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -81,10 +82,10 @@ export default function Home() {
         opacity: scroll.interpolate({ inputRange: [0, 160, 240], outputRange: [0, 0.8, 1], extrapolate: 'clamp' }) }} />
       <View style={{ height: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text variant="h2">AniStream</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('search')} onPress={() => router.push('/search')}
+        <Press accessibilityRole="button" accessibilityLabel={t('search')} onPress={() => router.push('/search')}
           style={({ pressed }) => ({ width: 48, height: 48, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
           <Icon name="search-outline" size={24} color={colors.text} />
-        </Pressable>
+        </Press>
       </View>
     </View>
   </View>;

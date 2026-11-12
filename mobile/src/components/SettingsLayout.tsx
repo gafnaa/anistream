@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from 'react';
-import { ScrollView, View, Pressable } from 'react-native';
+import { Press } from '@/components/Press';
+import { ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { ArrowLeft, ChevronRight, Trash2 } from 'lucide-react-native';
 import { ActivityLayout } from './ActivityLayout';
@@ -18,7 +19,7 @@ export function SettingsLayout({ title, children }: PropsWithChildren<{ title: s
 }
 export function SettingsRow({ label, hint, onPress, children, icon, destructive }: PropsWithChildren<{ label: string; hint?: string; onPress?: () => void; icon?: React.ReactNode; destructive?: boolean }>) {
   const content = <>{icon}<View style={{ flex: 1, gap: 6 }}><Text>{label}</Text>{hint && <Text variant="caption" muted>{hint}</Text>}</View>{children}{onPress && (destructive ? <Trash2 size={22} color={colors['text-muted']} /> : <ChevronRight size={22} color={colors['text-muted']} />)}</>;
-  return onPress ? <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 64, opacity: pressed ? 0.65 : 1 })}>{content}</Pressable>
+  return onPress ? <Press accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 64, opacity: pressed ? 0.65 : 1 })}>{content}</Press>
     : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 64 }}>{content}</View>;
 }
 export function SettingsDivider() { return <View style={{ height: 1, backgroundColor: colors.line }} />; }
