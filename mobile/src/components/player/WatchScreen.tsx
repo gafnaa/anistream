@@ -42,6 +42,7 @@ function OnlineWatchScreen({ slug, previewNext = false }: { slug: string; previe
   const history = useHistory();
   const historyHydrated = useHistoryHydrated();
   const saved = history.find(item => item.episodeSlug === slug);
+  const episodeNumber = Number(series.data?.episodes.find(item => item.slug === slug)?.number ?? slug.match(/episode-(\d+(?:\.\d+)?)/)?.[1] ?? episode.data?.title.match(/episode\s+(\d+(?:\.\d+)?)/i)?.[1]) || undefined;
   const [position, setPosition] = useState<number | null>(null);
   const resume = position ?? (settings.resume && saved && saved.duration - saved.position > 30 ? saved.position : 0);
   const failedAttempt = useRef('');
@@ -151,7 +152,7 @@ function OnlineWatchScreen({ slug, previewNext = false }: { slug: string; previe
         }}><Text>{t('retry')}</Text></Button><Button variant="secondary" onPress={goBack}><Text>{t('back')}</Text></Button></View>
       </View> : source && historyHydrated ? source.type === 'iframe' ? <><EmbedPlayer url={source.url} onError={fail} />{chrome}</> :
         <NativePlayer key={`${index}-${attempt}`} url={withApiKey(new URL(source.playUrl || source.url, `${API_URL}/`).href)} type={source.type}
-          resume={resume} onSave={save} onError={fail}
+          resume={resume} onSave={save} onError={fail} seriesTitle={episode.data?.seriesTitle} episodeNumber={episodeNumber}
           onNext={settings.autoplayNext && episode.data?.nextSlug ? next : undefined} previewNext={previewNext}>{chrome}</NativePlayer>
         : <View style={styles.error}><ActivityIndicator color={colors.text} />{chrome}</View>}
     </View>

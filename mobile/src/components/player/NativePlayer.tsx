@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { colors } from '@/theme';
 import { t } from '@/i18n';
 import { PlayerButton } from './PlayerButton';
+import { useSkipTimes } from '@/api';
 
 const AUTOPLAY_NEXT = true;
 // expo-video exposes seeking through a mutable native player property.
@@ -22,9 +23,10 @@ function time(value: number) {
   const seconds = Math.max(0, Math.floor(value));
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
-export function NativePlayer({ url, type, resume, onSave, onError, onNext, children, previewNext = false }: {
+export function NativePlayer({ url, type, resume, onSave, onError, onNext, children, previewNext = false, seriesTitle, episodeNumber }: {
   url: string; type: 'hls' | 'mp4'; resume: number; onSave: (position: number, duration: number) => void;
   onError: () => void; onNext?: () => void; children: React.ReactNode; previewNext?: boolean;
+  seriesTitle?: string | null; episodeNumber?: number;
 }) {
   const [initialResume] = useState(resume);
   const scrubberWidth = useRef(1);
@@ -35,6 +37,10 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
   const [buffering, setBuffering] = useState(true);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
+  const skipTimes = useSkipTimes(seriesTitle, episodeNumber, duration);
+  const skipInterval = skipTimes.data?.intervals.find(interval => position >= interval.start && position < interval.end);
+  const fallbackSkip = duration > 0 && position < 300 && !skipTimes.isFetching && !skipTimes.data?.intervals.length;
+  const skipLabel = skipInterval ? t(skipInterval.type === 'op' ? 'skipIntro' : skipInterval.type === 'ed' ? 'skipEnding' : 'skipRecap') : t('skipForward85');
   const [visible, setVisible] = useState(true);
   const [ripple, setRipple] = useState(0);
   const [cancelled, setCancelled] = useState(false);
@@ -141,6 +147,16 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
     </View>
     {buffering && <ActivityIndicator pointerEvents="none" color={colors.text} style={StyleSheet.absoluteFill} />}
     {!!ripple && <View pointerEvents="none" style={{ position: 'absolute', top: '38%', left: ripple < 0 ? '12%' : '70%', backgroundColor: '#FFFFFF33', borderRadius: 48, padding: 18 }}><Text tabular>{ripple > 0 ? '+10' : '−10'}</Text></View>}
+    {(skipInterval || fallbackSkip) && <Pressable accessibilityRole="button" accessibilityLabel={skipLabel}
+      onPress={() => {
+        const target = Math.min(duration, skipInterval?.end ?? player.currentTime + 85);
+        seekTo(player, target);
+        setPosition(target);
+      }} style={({ pressed }) => ({ position: 'absolute', right: 16, bottom: upNext ? 156 : 80, minHeight: 48, justifyContent: 'center', opacity: pressed ? 0.7 : 1, zIndex: 2 })}>
+      <View style={{ height: skipInterval ? 40 : 32, borderRadius: 20, paddingHorizontal: 18, justifyContent: 'center', backgroundColor: 'rgba(11,13,18,0.85)' }}>
+        <Text style={{ color: '#FFFFFF', fontSize: 14 }}>{skipLabel}</Text>
+      </View>
+    </Pressable>}
     {visible && <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
       {children}
       <View style={{ position: 'absolute', top: '38%', alignSelf: 'center' }}>

@@ -1,4 +1,5 @@
 import express from 'express';
+import { getSkipTimes } from './skip.js';
 import { latestRelease, latestApk } from './update.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -85,6 +86,10 @@ const wrap = (fn) => (req, res) => {
 /* ------------------------------------------------------------------ */
 /* API routes                                                          */
 /* ------------------------------------------------------------------ */
+app.get('/api/skip', async (req, res) => {
+  res.json(await getSkipTimes(req.query.title, req.query.episode, req.query.duration));
+});
+
 app.get('/api/app/latest', wrap(async (req, res) => {
   res.json((await latestRelease()).payload);
 }));
