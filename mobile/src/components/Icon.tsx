@@ -1,11 +1,11 @@
-import { ArrowLeft, ArrowDownUp, Check, CheckCircle, ChevronLeft, ChevronRight, Circle, CirclePlay, Compass, Expand, History, House, Minimize, Pause, Play, Search, Server, Share2, SkipBack, SkipForward, Sparkles, UserRound, Volume2, VolumeX, X, type LucideProps } from 'lucide-react-native';
+import { ArrowLeft, ArrowDownUp, Check, CheckCircle, ChevronLeft, ChevronRight, Circle, CirclePlay, Compass, Expand, History, Maximize, House, Minimize, Pause, Play, RotateCcw, RotateCw, Search, Server, Share2, SkipBack, SkipForward, Sparkles, UserRound, Volume2, VolumeX, X, type LucideProps } from 'lucide-react-native';
 const icons = {
   'arrow-back': ArrowLeft, 'chevron-back': ChevronLeft, 'chevron-forward': ChevronRight,
   'search-outline': Search, close: X, 'time-outline': History, time: History,
   'home-outline': House, home: House, 'compass-outline': Compass, compass: Compass,
   'play-circle-outline': CirclePlay, 'play-circle': CirclePlay, sparkles: Sparkles, 'person-outline': UserRound, person: UserRound,
   'share-outline': Share2, 'server-outline': Server, 'play-skip-back': SkipBack,
-  'play-skip-forward': SkipForward, play: Play, pause: Pause, expand: Expand, contract: Minimize,
+  'play-skip-forward': SkipForward, play: Play, pause: Pause, expand: Expand, contract: Minimize, maximize: Maximize, 'rotate-back': RotateCcw, 'rotate-forward': RotateCw,
   'checkmark-circle-outline': CheckCircle, checkmark: Check, 'swap-vertical': ArrowDownUp,
   'volume-high': Volume2, 'volume-mute': VolumeX,
 };

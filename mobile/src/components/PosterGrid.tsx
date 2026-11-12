@@ -23,7 +23,7 @@ export function PosterGrid({ items, header, loading = false, error = false, retr
   const tabInset = useTabBarInset();
   const posterWidth = (width - 72) / 3;
   const showSkeleton = useDelayedSkeleton(loading);
-  const skeletons = <SkeletonMotionControl overlayControl><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+  const skeletons = <SkeletonMotionControl><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
     {Array.from({ length: fetchingNext ? 3 : 9 }, (_, i) => <View key={i} style={{ width: posterWidth, gap: 8, paddingBottom: 20 }}>
       <PosterSkeleton width={posterWidth} /><View style={{ height: 32 }} />
     </View>)}

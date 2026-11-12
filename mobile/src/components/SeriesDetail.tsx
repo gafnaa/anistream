@@ -197,7 +197,7 @@ export function SeriesSkeleton() {
       <SkeletonBox width="75%" height={16} />
       <View style={{ flexDirection: 'row', gap: 12 }}><SkeletonBox width="48%" height={40} style={{ borderRadius: 20 }} /><SkeletonBox width="48%" height={40} style={{ borderRadius: 20 }} /></View>
       <SkeletonBox height={30} />
-      <SkeletonMotionControl overlayControl><SkeletonText lines={3} lineHeight={16} /></SkeletonMotionControl>
+      <SkeletonMotionControl><SkeletonText lines={3} lineHeight={16} /></SkeletonMotionControl>
       <SkeletonBox width="35%" height={24} />
       <SkeletonBox height={88} /><SkeletonBox height={88} />
     </View>
