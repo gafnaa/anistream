@@ -1,6 +1,7 @@
 import express from 'express';
 import { getSkipTimes } from './skip.js';
 import { enrichCovers } from './covers.js';
+import { getThumb, warmThumbs } from './thumbs.js';
 import { latestRelease, latestApk } from './update.js';
 import path from 'node:path';
 import { Readable } from 'node:stream';
@@ -21,6 +22,8 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 5178;
+// Thumbnail jobs reuse our own episode/resolve/proxy routes over loopback.
+const LOCAL_API = `http://127.0.0.1:${PORT}`;
 
 app.use(express.json());
 
@@ -117,6 +120,7 @@ app.get('/api/home', wrap(async (req, res) => {
   res.json(await cached('home', TTL.home, async () => {
     const home = await getHome();
     await enrichCovers([...home.latest, ...home.ongoing, ...home.trending]);
+    warmThumbs(home.latest.filter(item => item.kind === 'episode').map(item => item.slug), LOCAL_API);
     return home;
   }));
 }));
@@ -153,6 +157,29 @@ app.get('/api/search', wrap(async (req, res) => {
   const q = String(req.query.q || '').trim();
   const page = Math.max(1, Number(req.query.page) || 1);
   res.json(await cached(`search:${q}:${page}`, TTL.list, () => withCovers(search(q, page))));
+}));
+
+/**
+ * A frame from the episode itself, for episode cards and rows. 404 (not
+ * cached) until the frame exists, so the app shows the series cover meanwhile.
+ */
+app.get('/api/thumb/:slug', wrap(async (req, res) => {
+  const slug = req.params.slug;
+  if (!/^[\w~.-]{1,200}$/.test(slug)) return res.status(400).json({ error: 'Invalid slug' });
+  let timer;
+  try {
+    const file = await Promise.race([
+      getThumb(slug, LOCAL_API),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('Thumbnail pending')), 20_000); }),
+    ]);
+    res.set('Cache-Control', 'public, max-age=2592000, immutable');
+    res.sendFile(file, { dotfiles: 'allow' });
+  } catch {
+    res.set('Cache-Control', 'no-store');
+    res.status(404).json({ error: 'Thumbnail unavailable' });
+  } finally {
+    clearTimeout(timer);
+  }
 }));
 
 app.get('/api/series/:slug', wrap(async (req, res) => {
