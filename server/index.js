@@ -245,7 +245,11 @@ app.get('/api/video', wrap(async (req, res) => {
     const value = upstream.headers.get(name);
     if (value) res.setHeader(name, value);
   }
-  if (!upstream.body) return res.end();
+  // HEAD (size probes from the download sheet) must not pull the whole file.
+  if (req.method === 'HEAD' || !upstream.body) {
+    controller.abort();
+    return res.end();
+  }
   try {
     await pipeline(Readable.fromWeb(upstream.body), res);
   } catch {
