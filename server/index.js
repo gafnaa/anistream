@@ -1,5 +1,6 @@
 import express from 'express';
 import { getSkipTimes } from './skip.js';
+import { enrichCovers } from './covers.js';
 import { latestRelease, latestApk } from './update.js';
 import path from 'node:path';
 import { Readable } from 'node:stream';
@@ -64,6 +65,13 @@ const TTL = {
   genres: 86_400_000,
 };
 
+/** Upgrade `items[].image` to AniList covers where possible. */
+async function withCovers(promise) {
+  const page = await promise;
+  await enrichCovers(page.items);
+  return page;
+}
+
 function cached(key, ttl, fn) {
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < ttl) return Promise.resolve(hit.value);
@@ -106,17 +114,25 @@ app.get('/api/app/apk', wrap(async (req, res) => {
 }));
 
 app.get('/api/home', wrap(async (req, res) => {
-  res.json(await cached('home', TTL.home, getHome));
+  res.json(await cached('home', TTL.home, async () => {
+    const home = await getHome();
+    await enrichCovers([...home.latest, ...home.ongoing, ...home.trending]);
+    return home;
+  }));
 }));
 
 app.get('/api/latest', wrap(async (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1);
-  res.json(await cached(`latest:${page}`, TTL.list, () => getLatest(page)));
+  res.json(await cached(`latest:${page}`, TTL.list, () => withCovers(getLatest(page))));
 }));
 
 app.get('/api/schedule', wrap(async (req, res) => {
   const week = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
-  res.json(await cached(`schedule:${week}`, 1800_000, getSchedule));
+  res.json(await cached(`schedule:${week}`, 1800_000, async () => {
+    const schedule = await getSchedule();
+    await enrichCovers(schedule.days.flatMap(day => day.items));
+    return schedule;
+  }));
 }));
 
 app.get('/api/genres', wrap(async (req, res) => {
@@ -128,7 +144,7 @@ app.get('/api/browse', wrap(async (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1);
   res.json(
     await cached(`browse:${status}:${type}:${order}:${genre}:${page}`, TTL.list, () =>
-      browse({ status, type, order, genre, page }),
+      withCovers(browse({ status, type, order, genre, page })),
     ),
   );
 }));
@@ -136,11 +152,15 @@ app.get('/api/browse', wrap(async (req, res) => {
 app.get('/api/search', wrap(async (req, res) => {
   const q = String(req.query.q || '').trim();
   const page = Math.max(1, Number(req.query.page) || 1);
-  res.json(await cached(`search:${q}:${page}`, TTL.list, () => search(q, page)));
+  res.json(await cached(`search:${q}:${page}`, TTL.list, () => withCovers(search(q, page))));
 }));
 
 app.get('/api/series/:slug', wrap(async (req, res) => {
-  res.json(await cached(`series:${req.params.slug}`, TTL.series, () => getSeries(req.params.slug)));
+  res.json(await cached(`series:${req.params.slug}`, TTL.series, async () => {
+    const series = await getSeries(req.params.slug);
+    await enrichCovers([series]);
+    return series;
+  }));
 }));
 
 app.get('/api/episode/:slug', wrap(async (req, res) => {
