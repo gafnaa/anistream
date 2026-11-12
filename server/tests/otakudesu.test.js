@@ -93,3 +93,12 @@ test('accepts Otakudesu MP4s hosted on archive.org', async () => {
   assert.deepEqual(await resolveMirror(mp4), { type: 'mp4', url: mp4 });
   await assert.rejects(resolveMirror('https://archive.org/details/item'), /embed host/);
 });
+
+test('resolves older otakuwatch mirrors to a proxied googlevideo MP4', async () => {
+  const original = globalThis.fetch;
+  const video = 'https://rr3---sn-x.googlevideo.com/videoplayback?expire=1&ip=1.2.3.4&mime=video/mp4';
+  globalThis.fetch = async () => ({ ok: true, status: 200, text: async () => `<script>sources: [{file: "${video.replace(/&/g, '&amp;')}"}]</script>` });
+  try {
+    assert.deepEqual(await resolveMirror('https://v4.desustream.com/dstream/otakuwatch2/new/hd/index.php?id=x'), { type: 'mp4', url: video, proxied: true });
+  } finally { globalThis.fetch = original; }
+});

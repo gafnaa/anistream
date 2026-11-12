@@ -2,6 +2,8 @@ import express from 'express';
 import { getSkipTimes } from './skip.js';
 import { latestRelease, latestApk } from './update.js';
 import path from 'node:path';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import {
   getHome,
@@ -158,7 +160,7 @@ app.get('/api/resolve', wrap(async (req, res) => {
     return res.status(400).json({ error: 'Invalid mirror URL' });
   }
 
-  const allowed = /(^|\.)(xtwap\.top|blogger\.com|samehadaku\.li|ok\.ru|dailymotion\.com|youtube\.com|youtu\.be|drive\.google\.com|desustream\.net$|odcloud\.net$|archive\.org$|filemoon|acefile|bilibili)/i;
+  const allowed = /(^|\.)(xtwap\.top|blogger\.com|samehadaku\.li|ok\.ru|dailymotion\.com|youtube\.com|youtu\.be|drive\.google\.com|desustream\.(net|com)$|odcloud\.net$|archive\.org$|filemoon|acefile|bilibili)/i;
   if (!allowed.test(host)) {
     return res.status(400).json({ error: `Mirror host not allowed: ${host}` });
   }
@@ -170,6 +172,8 @@ app.get('/api/resolve', wrap(async (req, res) => {
   // browser can never load these segments on its own.
   if (stream.type === 'hls') {
     stream.playUrl = `/api/hls?url=${encodeURIComponent(stream.url)}${keySuffix(req)}`;
+  } else if (stream.proxied) {
+    stream.playUrl = `/api/video?url=${encodeURIComponent(stream.url)}${keySuffix(req)}`;
   } else {
     stream.playUrl = stream.url;
   }
@@ -215,6 +219,43 @@ function rewriteManifest(body, baseUrl, suffix = '') {
     })
     .join('\n');
 }
+
+/**
+ * Range-aware MP4 proxy for googlevideo.com files, whose URLs only work from
+ * the IP that resolved them (this server).
+ */
+app.get('/api/video', wrap(async (req, res) => {
+  let url;
+  try {
+    url = new URL(String(req.query.url || ''));
+  } catch {
+    return res.status(400).json({ error: 'Invalid video URL' });
+  }
+  if (url.protocol !== 'https:' || !/(^|\.)googlevideo\.com$/i.test(url.hostname)) {
+    return res.status(400).json({ error: `Host not allowed: ${url.hostname}` });
+  }
+  const controller = new AbortController();
+  res.on('close', () => controller.abort());
+  const upstream = await fetch(url, {
+    signal: controller.signal,
+    headers: { 'User-Agent': UA, ...(req.headers.range ? { Range: req.headers.range } : {}) },
+  });
+  res.status(upstream.status);
+  for (const name of ['content-type', 'content-length', 'content-range', 'accept-ranges']) {
+    const value = upstream.headers.get(name);
+    if (value) res.setHeader(name, value);
+  }
+  // HEAD (size probes from the download sheet) must not pull the whole file.
+  if (req.method === 'HEAD' || !upstream.body) {
+    controller.abort();
+    return res.end();
+  }
+  try {
+    await pipeline(Readable.fromWeb(upstream.body), res);
+  } catch {
+    // The player closed the connection (seek or stop); nothing to report.
+  }
+}));
 
 app.get('/api/hls', wrap(async (req, res) => {
   const target = String(req.query.url || '');
