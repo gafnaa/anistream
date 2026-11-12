@@ -3,10 +3,29 @@ const titles = new Map();
 const skips = new Map();
 const empty = () => ({ malId: null, intervals: [] });
 
-export function mapSkipIntervals(body) {
+// AniSkip only matches submissions whose episodeLength is within a few seconds of
+// the one queried, but our encodes often differ slightly. Fetch everything
+// (episodeLength=0) and choose here: drop submissions from a clearly different
+// cut, then keep the closest one per type.
+const LENGTH_TOLERANCE = 60;
+
+function pickByLength(results, duration) {
+  if (!duration) return results;
+  const best = new Map();
+  for (const result of results) {
+    const length = result?.episodeLength;
+    const diff = Number.isFinite(length) && length > 0 ? Math.abs(length - duration) : LENGTH_TOLERANCE;
+    if (diff > LENGTH_TOLERANCE) continue;
+    const type = result?.skipType;
+    if (!best.has(type) || diff < best.get(type).diff) best.set(type, { diff, result });
+  }
+  return [...best.values()].map(entry => entry.result);
+}
+
+export function mapSkipIntervals(body, duration = 0) {
   if (!body?.found || !Array.isArray(body.results)) return [];
   const types = { op: 'op', ed: 'ed', 'mixed-op': 'op', 'mixed-ed': 'ed', recap: 'recap' };
-  return body.results.flatMap(result => {
+  return pickByLength(body.results, duration).flatMap(result => {
     const type = types[result?.skipType];
     const start = result?.interval?.startTime;
     const end = result?.interval?.endTime;
@@ -51,16 +70,15 @@ export async function getSkipTimes(title, episode, duration = 0) {
       write(titles, normalized, malId, malId ? 7 * DAY : DAY);
     }
     if (!malId) return empty();
-    const key = `${malId}:${episode}:${duration}`;
-    let result = read(skips, key);
-    if (result === undefined) {
-      const params = new URLSearchParams({ episodeLength: String(duration) });
+    const key = `${malId}:${episode}`;
+    let body = read(skips, key);
+    if (body === undefined) {
+      const params = new URLSearchParams({ episodeLength: '0' });
       for (const type of ['op', 'ed', 'mixed-op', 'mixed-ed', 'recap']) params.append('types', type);
-      const body = await json(`https://api.aniskip.com/v2/skip-times/${malId}/${episode}?${params}`);
-      const intervals = mapSkipIntervals(body);
-      result = write(skips, key, intervals.length ? { malId, intervals } : empty(), DAY);
+      body = write(skips, key, await json(`https://api.aniskip.com/v2/skip-times/${malId}/${episode}?${params}`), DAY);
     }
-    return result;
+    const intervals = mapSkipIntervals(body, duration);
+    return intervals.length ? { malId, intervals } : empty();
   } catch {
     return empty();
   }
