@@ -1,3 +1,4 @@
+import { OD_BASE, odUrl, parseOdSearch, parseOdSeries, parseOdEpisode } from './otakudesu.js';
 import * as cheerio from 'cheerio';
 
 export const BASE = 'https://samehadaku.li';
@@ -292,14 +293,26 @@ export async function search(query, page = 1) {
   if (!q) return { items: [], query: q, page: 1, hasNext: false };
 
   const url = `${BASE}/?s=${encodeURIComponent(q)}${page > 1 ? `&page=${page}` : ''}`;
-  const html = await fetchPage(url);
-  const $ = cheerio.load(html);
-  const items = parseCards($, $('.listupd').first());
-  return { items, query: q, page, hasNext: $('.hpage a.r').length > 0 };
+  const [samehadaku, otakudesu] = await Promise.allSettled([
+    fetchPage(url).then(html => {
+      const $ = cheerio.load(html);
+      return { items: parseCards($, $('.listupd').first()), hasNext: $('.hpage a.r').length > 0 };
+    }),
+    odFetch(`${OD_BASE}/${page > 1 ? `page/${page}/` : ''}?${new URLSearchParams({ s: q, post_type: 'anime' })}`, AbortSignal.timeout(6000)).then(parseOdSearch),
+  ]);
+  const primary = samehadaku.status === 'fulfilled' ? samehadaku.value : { items: [], hasNext: false };
+  const secondary = otakudesu.status === 'fulfilled' ? otakudesu.value : { items: [], hasNext: false };
+  const items = [...primary.items];
+  for (const item of secondary.items) {
+    const title = normalizeAnimeTitle(item.title);
+    if (!items.some(other => titleMatchScore(title, normalizeAnimeTitle(other.title)) || titleMatchScore(normalizeAnimeTitle(other.title), title))) items.push(item);
+  }
+  return { items, query: q, page, hasNext: primary.hasNext || secondary.hasNext };
 }
 
 /** Full series detail: metadata, synopsis, genres, and the episode list. */
 export async function getSeries(slug) {
+  if (slug.startsWith('od~')) return parseOdSeries(await odFetch(odUrl(slug, 'anime'), AbortSignal.timeout(6000)), slug);
   const html = await fetchPage(`${BASE}/anime/${slug}/`);
   const $ = cheerio.load(html);
 
@@ -375,7 +388,6 @@ export async function getSeries(slug) {
  *   2. play.xtwap.top/cepat2.php?url= -> a JW Player wrapper that we can resolve
  *      into a real HLS manifest (mp4/m3u8) that our own player can stream
  */
-const OD_BASE = 'https://otakudesu.blog';
 const odMatches = new Map();
 const OD_TTL = 86_400_000;
 
@@ -476,7 +488,10 @@ async function getOtakudesuSources(title, number, signal) {
   });
   if (episodes.size !== 1) return [];
   const episodeUrl = [...episodes][0];
-  const html = await odFetch(episodeUrl, signal);
+  return getOdPageSources(await odFetch(episodeUrl, signal), signal);
+}
+
+async function getOdPageSources(html, signal) {
   const page = cheerio.load(html);
   const mirrors = [];
   page('a[data-content]').each((_, el) => {
@@ -528,6 +543,11 @@ function episodeSeriesMetadata($) {
 }
 
 export async function getEpisode(slug) {
+  if (slug.startsWith('od~')) {
+    const signal = AbortSignal.timeout(12000);
+    const html = await odFetch(odUrl(slug, 'episode'), signal);
+    return { ...parseOdEpisode(html, slug), sources: await getOdPageSources(html, signal) };
+  }
   const odController = new AbortController();
   const odTimer = setTimeout(() => odController.abort(), 6000);
   const episodeNumber = slug.match(/episode-(\d+(?:\.\d+)?)/)?.[1];
