@@ -1,3 +1,4 @@
+import { searchMn, getMnSeries, getMnEpisode, MN_VIDEO_HOST } from './mirainime.js';
 import { OD_BASE, odUrl, parseOdSearch, parseOdSeries, parseOdEpisode } from './otakudesu.js';
 import * as cheerio from 'cheerio';
 
@@ -293,25 +294,27 @@ export async function search(query, page = 1) {
   if (!q) return { items: [], query: q, page: 1, hasNext: false };
 
   const url = `${BASE}/?s=${encodeURIComponent(q)}${page > 1 ? `&page=${page}` : ''}`;
-  const [samehadaku, otakudesu] = await Promise.allSettled([
+  const [samehadaku, otakudesu, mirainime] = await Promise.allSettled([
     fetchPage(url).then(html => {
       const $ = cheerio.load(html);
       return { items: parseCards($, $('.listupd').first()), hasNext: $('.hpage a.r').length > 0 };
     }),
     odFetch(`${OD_BASE}/${page > 1 ? `page/${page}/` : ''}?${new URLSearchParams({ s: q, post_type: 'anime' })}`, AbortSignal.timeout(6000)).then(parseOdSearch),
+    searchMn(q, page),
   ]);
   const primary = samehadaku.status === 'fulfilled' ? samehadaku.value : { items: [], hasNext: false };
   const secondary = otakudesu.status === 'fulfilled' ? otakudesu.value : { items: [], hasNext: false };
   const items = [...primary.items];
-  for (const item of secondary.items) {
+  for (const item of [...secondary.items, ...(mirainime.status === 'fulfilled' ? mirainime.value.items : [])]) {
     const title = normalizeAnimeTitle(item.title);
     if (!items.some(other => titleMatchScore(title, normalizeAnimeTitle(other.title)) || titleMatchScore(normalizeAnimeTitle(other.title), title))) items.push(item);
   }
-  return { items, query: q, page, hasNext: primary.hasNext || secondary.hasNext };
+  return { items, query: q, page, hasNext: primary.hasNext || secondary.hasNext || (mirainime.status === 'fulfilled' && mirainime.value.hasNext) };
 }
 
 /** Full series detail: metadata, synopsis, genres, and the episode list. */
 export async function getSeries(slug) {
+  if (slug.startsWith('mn~')) return getMnSeries(slug);
   if (slug.startsWith('od~')) return parseOdSeries(await odFetch(odUrl(slug, 'anime'), AbortSignal.timeout(6000)), slug);
   const html = await fetchPage(`${BASE}/anime/${slug}/`);
   const $ = cheerio.load(html);
@@ -543,6 +546,7 @@ function episodeSeriesMetadata($) {
 }
 
 export async function getEpisode(slug) {
+  if (slug.startsWith('mn~')) return getMnEpisode(slug);
   if (slug.startsWith('od~')) {
     const signal = AbortSignal.timeout(12000);
     const html = await odFetch(odUrl(slug, 'episode'), signal);
@@ -629,6 +633,11 @@ export async function resolveMirror(mirrorUrl) {
     host = new URL(mirrorUrl).hostname;
   } catch {
     throw new Error('Invalid mirror URL');
+  }
+  if (MN_VIDEO_HOST.test(host)) {
+    const url = new URL(mirrorUrl);
+    if (url.protocol !== 'https:' || !/\.mp4$/i.test(url.pathname)) throw new Error('Invalid Mirainime video URL');
+    return { type: 'mp4', url: url.href, host, proxied: true };
   }
   if (/(^|\.)(desustream\.(net|com)|odcloud\.net|archive\.org)$/.test(host)) {
     return resolveOdEmbed(mirrorUrl, AbortSignal.timeout(6000));

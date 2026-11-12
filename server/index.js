@@ -1,3 +1,4 @@
+import { MN_VIDEO_HOST } from './mirainime.js';
 import express from 'express';
 import { getSkipTimes } from './skip.js';
 import { enrichCovers } from './covers.js';
@@ -164,7 +165,7 @@ app.get('/api/series/:slug', wrap(async (req, res) => {
 }));
 
 app.get('/api/episode/:slug', wrap(async (req, res) => {
-  res.json(await cached(`episode:${req.params.slug}`, TTL.episode, () => getEpisode(req.params.slug)));
+  res.json(await cached(`episode:${req.params.slug}`, req.params.slug.startsWith('mn~') ? 15_000 : TTL.episode, () => getEpisode(req.params.slug)));
 }));
 
 /**
@@ -181,11 +182,11 @@ app.get('/api/resolve', wrap(async (req, res) => {
   }
 
   const allowed = /(^|\.)(xtwap\.top|blogger\.com|samehadaku\.li|ok\.ru|dailymotion\.com|youtube\.com|youtu\.be|drive\.google\.com|desustream\.(net|com)$|odcloud\.net$|archive\.org$|filemoon|acefile|bilibili)/i;
-  if (!allowed.test(host)) {
+  if (!allowed.test(host) && !MN_VIDEO_HOST.test(host)) {
     return res.status(400).json({ error: `Mirror host not allowed: ${host}` });
   }
 
-  const stream = await cached(`stream:${mirror}`, TTL.stream, () => resolveMirror(mirror));
+  const stream = await cached(`stream:${mirror}`, MN_VIDEO_HOST.test(host) ? 15_000 : TTL.stream, () => resolveMirror(mirror));
 
   // Rewrite the manifest through our proxy: the CDN sends
   // Access-Control-Allow-Origin: https://play.xtwap.top only, so the
@@ -241,7 +242,7 @@ function rewriteManifest(body, baseUrl, suffix = '') {
 }
 
 /**
- * Range-aware MP4 proxy for googlevideo.com files, whose URLs only work from
+ * Range-aware MP4 proxy for Googlevideo and Mirainime files, whose URLs only work from
  * the IP that resolved them (this server).
  */
 app.get('/api/video', wrap(async (req, res) => {
@@ -251,14 +252,14 @@ app.get('/api/video', wrap(async (req, res) => {
   } catch {
     return res.status(400).json({ error: 'Invalid video URL' });
   }
-  if (url.protocol !== 'https:' || !/(^|\.)googlevideo\.com$/i.test(url.hostname)) {
+  if (url.protocol !== 'https:' || (!/(^|\.)googlevideo\.com$/i.test(url.hostname) && !MN_VIDEO_HOST.test(url.hostname))) {
     return res.status(400).json({ error: `Host not allowed: ${url.hostname}` });
   }
   const controller = new AbortController();
   res.on('close', () => controller.abort());
   const upstream = await fetch(url, {
     signal: controller.signal,
-    headers: { 'User-Agent': UA, ...(req.headers.range ? { Range: req.headers.range } : {}) },
+    headers: { 'User-Agent': UA, ...(MN_VIDEO_HOST.test(url.hostname) ? { Referer: 'https://mirainime.com/' } : {}), ...(req.headers.range ? { Range: req.headers.range } : {}) },
   });
   res.status(upstream.status);
   for (const name of ['content-type', 'content-length', 'content-range', 'accept-ranges']) {

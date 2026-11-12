@@ -167,3 +167,22 @@ and irregular releases can produce inaccurate predictions. Shows with no release
 in eight days are absent. Otakudesu is not used. Upstream errors return 502 so an
 incomplete schedule is not silently cached. Successful responses are cached for
 30 minutes, with a fresh cache key at WIB midnight to avoid crossing a week boundary.
+
+## Mirainime catalogue
+
+Search also queries Mirainime's `/anime-list?q=…&tab=anime` in parallel (the
+`/anime?search=…` URL currently ignores its search parameter). Normalized title
+duplicates prefer Samehadaku, then Otakudesu, then Mirainime; source failures are
+independent. Mirainime uses `mn~<series>` and `mn~<series>~<positive episode>`
+slugs. Series detail reads the player's full episode array, including all 500
+Shippuuden episodes, and rejects an incomplete list rather than caching it.
+
+Episode requests retain session cookies and send the page's stream token to the
+JSON endpoint. MP4 qualities and alternates use the existing resolvable-source
+contract: `/api/resolve` returns `proxied: true` and a keyed `/api/video` playUrl,
+which works for both playback and downloads. The video proxy allows only
+`arianeglenys.my.id`, `suguha.my.id`, `ichinose.my.id` and their subdomains for
+these streams, sending `Referer: https://mirainime.com/` and forwarding Range.
+Signed URLs are IP-bound and their expiry parameter is encrypted; Mirainime
+episode and resolve responses are cached for only 15 seconds. Unsupported HLS
+and other hosts are skipped. No mobile changes are required.
