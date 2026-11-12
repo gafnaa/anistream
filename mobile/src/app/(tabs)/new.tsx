@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import { Press } from '@/components/Press';
 import { Schedule } from '@/components/Schedule';
 import { RecoveryState } from '@/components/RecoveryState';
 import { useOffline, OfflineState } from '@/components/Connectivity';
-import { SectionList, RefreshControl, View, Pressable } from 'react-native';
+import { SectionList, RefreshControl, View } from 'react-native';
 import { useLatest } from '@/api';
 import { useBookmarks } from '@/storage';
 import { ActivityLayout, dayLabel, relativeTime } from '@/components/ActivityLayout';
@@ -44,10 +45,10 @@ export default function New() {
   const skeleton = <SkeletonMotionControl>{[0, 1, 2, 3, 4].map(i => <ListItemSkeleton key={i} />)}</SkeletonMotionControl>;
   const failure = <View style={{ gap: 12, paddingVertical: 24 }}><Text accessibilityRole="alert" muted>{t('catalogueError')}</Text><Button onPress={() => void query.refetch()}><Text>{t('retry')}</Text></Button></View>;
   const header = <View style={{ paddingTop: 24, gap: 24, paddingBottom: 32 }}><Text variant="h1" accessibilityRole="header">{t('new')}</Text>
-    <View style={{ flexDirection: 'row', gap: 10 }}>{(['latest', 'schedule'] as const).map(value => <Pressable key={value} accessibilityRole="tab" accessibilityState={{ selected: segment === value }} onPress={() => setSegment(value)}
+    <View style={{ flexDirection: 'row', gap: 10 }}>{(['latest', 'schedule'] as const).map(value => <Press key={value} accessibilityRole="tab" accessibilityState={{ selected: segment === value }} onPress={() => setSegment(value)}
       style={({ pressed }) => ({ flex: 1, minHeight: 44, justifyContent: 'center', padding: 8, borderWidth: 1, borderColor: segment === value ? colors.brand : colors.card, borderRadius: 6, backgroundColor: segment === value ? '#F43F5E1F' : colors.card, opacity: pressed ? 0.7 : 1 })}>
       <Text variant="caption" style={{ color: segment === value ? colors.accent : colors.text }}>{t(value === 'latest' ? 'latestSegment' : 'scheduleSegment')}</Text>
-    </Pressable>)}</View>
+    </Press>)}</View>
   </View>;
   if (segment === 'schedule') return <ActivityLayout><Schedule header={header} /></ActivityLayout>;
   return <ActivityLayout><SectionList sections={byDay(items)} keyExtractor={item => item.slug}

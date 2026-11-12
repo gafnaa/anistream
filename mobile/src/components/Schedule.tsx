@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Press } from '@/components/Press';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSchedule } from '@/api';
 import { useBookmarks } from '@/storage';
@@ -35,13 +36,13 @@ export function Schedule({ header }: { header: ReactNode }) {
     {header}
     <Text muted style={{ marginBottom: 20 }}>{t('thisWeek')}</Text>
     <View style={{ flexDirection: 'row', gap: 5, marginBottom: 36 }}>
-      {dates.map((date, index) => <Pressable key={index} accessibilityRole="tab" accessibilityState={{ selected: index === selected }}
+      {dates.map((date, index) => <Press key={index} accessibilityRole="tab" accessibilityState={{ selected: index === selected }}
         accessibilityLabel={`${date.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })}${index === todayIndex ? `, ${t('today')}` : ''}`}
         onPress={() => setSelected(index)} style={({ pressed }) => ({ flex: 1, minHeight: 72, paddingVertical: 12, alignItems: 'center', justifyContent: 'space-between', borderRadius: 8,
           backgroundColor: index === selected ? colors.primary : colors.card, opacity: pressed ? 0.7 : 1 })}>
         <Text variant="caption" style={{ fontSize: 11, color: index === selected ? '#FFFFFF' : colors.muted }}>{date.toLocaleDateString(locale, { weekday: 'short', timeZone: 'UTC' }).replace('.', '')}</Text>
         <Text style={{ color: index === selected ? '#FFFFFF' : colors.text }}>{date.getUTCDate()}</Text>
-      </Pressable>)}
+      </Press>)}
     </View>
     <Text variant="h2" accessibilityRole="header" style={{ marginBottom: 8 }}>{heading}</Text>
     {query.isPending ? <SkeletonMotionControl>{[0, 1, 2].map(i => <ListItemSkeleton key={i} />)}</SkeletonMotionControl>
@@ -49,7 +50,7 @@ export function Schedule({ header }: { header: ReactNode }) {
       : <>
         {query.isRefetchError && <RecoveryState kind="error" title={t('cachedError')} description={t('scheduleError')} label={t('retry')} action={() => { void query.refetch(); }} />}
         {!items.length && <Text muted style={{ paddingVertical: 24 }}>{t('scheduleEmpty')}</Text>}
-        {items.map(item => <Pressable key={item.seriesSlug} accessibilityRole="button"
+        {items.map(item => <Press key={item.seriesSlug} accessibilityRole="button"
           onPress={() => router.push({ pathname: item.released && item.episodeSlug ? '/watch/[slug]' : '/series/[slug]', params: { slug: item.released && item.episodeSlug ? item.episodeSlug : item.seriesSlug } })}
           style={({ pressed }) => ({ flexDirection: 'row', gap: 16, alignItems: 'center', paddingVertical: 18, opacity: pressed ? 0.7 : 1 })}>
           <EpisodeThumbnail image={item.image} />
@@ -59,7 +60,7 @@ export function Schedule({ header }: { header: ReactNode }) {
             <Text variant="caption" muted>{item.time.replace(':', '.')} WIB</Text>
             {bookmarks.some(saved => saved.slug === item.seriesSlug) && <Text variant="caption" style={{ color: colors.accent }}>{t('savedMarker')}</Text>}
           </View>
-        </Pressable>)}
+        </Press>)}
       </>}
     <Text variant="caption" muted style={{ marginTop: 48 }}>{t('scheduleNote')}</Text>
   </ScrollView>;
