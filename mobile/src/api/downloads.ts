@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiGet } from './client';
+import { API_URL, apiGet, withApiKey } from './client';
 import type { EpisodeResponse, ResolvedSource } from './types';
 export type DownloadOption = { url: string; quality: string; size: number };
 export function useDownloadOptions(slug: string) {
@@ -12,7 +12,8 @@ export function useDownloadOptions(slug: string) {
         if (!url) {
           try {
             const resolved = await apiGet<ResolvedSource>('/api/resolve', { mirror: source.url }, signal);
-            if (resolved.type === 'mp4') url = resolved.playUrl || resolved.url;
+            // Proxied files come back as a relative /api/video URL that needs our host and key.
+            if (resolved.type === 'mp4') url = resolved.playUrl ? withApiKey(new URL(resolved.playUrl, `${API_URL}/`).href) : resolved.url;
           } catch { return null; }
         }
         if (!/^https?:\/\//i.test(url)) return null;

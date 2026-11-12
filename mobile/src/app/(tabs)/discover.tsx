@@ -37,7 +37,7 @@ export default function Discover() {
         <Text muted accessibilityRole="alert">{t('genreFallback')}</Text>
         <Button variant="outline" onPress={() => void genres.refetch()}><Text>{t('retry')}</Text></Button>
       </View>}
-      {genres.isPending ? <View style={{ minHeight: 600 }}>{skeleton && <SkeletonMotionControl overlayControl>
+      {genres.isPending ? <View style={{ minHeight: 600 }}>{skeleton && <SkeletonMotionControl>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
           {Array.from({ length: 10 }, (_, i) => <SkeletonBox key={i} width="48%" height={118} />)}
         </View>

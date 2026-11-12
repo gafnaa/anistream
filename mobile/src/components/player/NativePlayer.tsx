@@ -24,10 +24,10 @@ function time(value: number) {
   const seconds = Math.max(0, Math.floor(value));
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
-export function NativePlayer({ url, type, resume, onSave, onError, onNext, children, previewNext = false, seriesTitle, episodeNumber }: {
+export function NativePlayer({ url, type, resume, onSave, onError, onNext, children, previewNext = false, seriesTitle, episodeNumber, fullscreen = false, onToggleFullscreen }: {
   url: string; type: 'hls' | 'mp4'; resume: number; onSave: (position: number, duration: number) => void;
   onError: () => void; onNext?: () => void; children: React.ReactNode; previewNext?: boolean;
-  seriesTitle?: string | null; episodeNumber?: number;
+  seriesTitle?: string | null; episodeNumber?: number; fullscreen?: boolean; onToggleFullscreen?: () => void;
 }) {
   const [initialResume] = useState(resume);
   const scrubberWidth = useRef(1);
@@ -159,12 +159,19 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
       </View>
     </Press>}
     {visible && <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.38)' }]} />
       {children}
-      <View style={{ position: 'absolute', top: '38%', alignSelf: 'center' }}>
-        <PlayerButton icon={playing ? 'pause' : 'play'} label={t(playing ? 'pausePlayback' : 'play')}
+      <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 40 }]}>
+        <PlayerButton icon="rotate-back" label={t('seekBack')} size={28} onPress={() => seek(-10)} />
+        <PlayerButton icon={playing ? 'pause' : 'play'} label={t(playing ? 'pausePlayback' : 'play')} size={40} filled
           onPress={() => playing ? player.pause() : player.play()} />
+        <PlayerButton icon="rotate-forward" label={t('seekForward')} size={28} onPress={() => seek(10)} />
       </View>
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16, backgroundColor: 'rgba(11,13,18,0.9)' }}>
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text variant="caption" tabular style={{ color: '#FFFFFF' }}>{time(position)} / {time(duration)}</Text>
+          {onToggleFullscreen && <PlayerButton icon={fullscreen ? 'contract' : 'maximize'} label={t(fullscreen ? 'exitFullscreen' : 'fullscreen')} onPress={onToggleFullscreen} />}
+        </View>
         <Pressable accessibilityRole="adjustable" accessibilityLabel={t('seek')}
           accessibilityValue={{ min: 0, max: duration, now: position, text: time(position) }}
           accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
@@ -182,12 +189,12 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
           onLayout={event => { scrubberWidth.current = event.nativeEvent.layout.width; }}
           onPress={event => {
             seekTo(player, event.nativeEvent.locationX / scrubberWidth.current * duration);
-          }} style={{ height: 48, justifyContent: 'center' }}>
-          <View style={{ height: 4, backgroundColor: '#9299AD' }}><View style={{ height: 4, width: `${duration ? position / duration * 100 : 0}%`, backgroundColor: colors.brand }} /></View>
+          }} style={{ height: 24, justifyContent: 'center' }}>
+          <View style={{ height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)' }}>
+            <View style={{ height: 3, borderRadius: 2, width: `${duration ? position / duration * 100 : 0}%`, backgroundColor: colors.primary }} />
+          </View>
+          <View pointerEvents="none" style={{ position: 'absolute', left: `${duration ? position / duration * 100 : 0}%`, marginLeft: -6, width: 12, height: 12, borderRadius: 6, backgroundColor: colors.primary }} />
         </Pressable>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 8 }}>
-          <Text variant="caption" tabular>{time(position)}</Text><Text variant="caption" tabular>−{time(duration - position)}</Text>
-        </View>
       </View>
     </View>}
     {upNext && <View style={{ position: 'absolute', right: 16, bottom: 76, padding: 12, borderRadius: 10, backgroundColor: colors.surface, flexDirection: 'row', gap: 12, alignItems: 'center' }}>

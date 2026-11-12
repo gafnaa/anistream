@@ -128,8 +128,7 @@ function OnlineWatchScreen({ slug, previewNext = false }: { slug: string; previe
   </View>;
   const chrome = <View pointerEvents="box-none" style={{ position: 'absolute', top: full ? Math.max(insets.top, 12) : 8, left: Math.max(insets.left, 12), right: Math.max(insets.right, 12), flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
     {full ? <PlayerButton icon="arrow-back" label={t('back')} onPress={goBack} /> : <View />}
-    <View style={styles.row}>{navigation}{full && <PlayerButton icon="server-outline" label={t('servers')} onPress={() => setPicker(value => !value)} />}
-      {source?.type !== 'iframe' && <PlayerButton icon={full ? 'contract' : 'expand'} label={t(full ? 'exitFullscreen' : 'fullscreen')} onPress={toggleFull} />}</View>
+    <View style={styles.row}>{navigation}{full && <PlayerButton icon="server-outline" label={t('servers')} onPress={() => setPicker(value => !value)} />}</View>
   </View>;
   const episodeTitle = episode.data ? episode.data.title.replace(/\s*subtitle indonesia\s*$/i, '').replace(episode.data.seriesTitle ?? '', '').trim() || episode.data.title : '';
   const error = failed || episode.isError || (episode.isSuccess && !sources.length);
@@ -153,7 +152,8 @@ function OnlineWatchScreen({ slug, previewNext = false }: { slug: string; previe
       </View> : source && historyHydrated ? source.type === 'iframe' ? <><EmbedPlayer url={source.url} onError={fail} />{chrome}</> :
         <NativePlayer key={`${index}-${attempt}`} url={withApiKey(new URL(source.playUrl || source.url, `${API_URL}/`).href)} type={source.type}
           resume={resume} onSave={save} onError={fail} seriesTitle={episode.data?.seriesTitle} episodeNumber={episodeNumber}
-          onNext={settings.autoplayNext && episode.data?.nextSlug ? next : undefined} previewNext={previewNext}>{chrome}</NativePlayer>
+          onNext={settings.autoplayNext && episode.data?.nextSlug ? next : undefined} previewNext={previewNext}
+          fullscreen={full} onToggleFullscreen={toggleFull}>{chrome}</NativePlayer>
         : <View style={styles.error}><ActivityIndicator color={colors.text} />{chrome}</View>}
     </View>
     {!full && <FlatList

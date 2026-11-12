@@ -1,25 +1,13 @@
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
-import { Press } from '@/components/Press';
 import { View, StyleSheet, type DimensionValue, type ViewStyle } from 'react-native';
 import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { colors, radius, spacing } from '@/theme';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Text } from '@/components/Text';
-import { t } from '@/i18n';
 
 const MotionContext = createContext(true);
-export function SkeletonMotionControl({ children, floatingControl = false, overlayControl = false }: PropsWithChildren<{ floatingControl?: boolean; overlayControl?: boolean }>) {
-  const [running, setRunning] = useState(true);
-  const reducedMotion = useReducedMotion();
-  if (reducedMotion) return <MotionContext.Provider value={false}>{children}</MotionContext.Provider>;
-  return <MotionContext.Provider value={running}>
-    <Press accessibilityRole="button" onPress={() => setRunning(value => !value)}
-      style={({ pressed }) => [styles.control, floatingControl && { position: 'absolute', top: -72, right: 0, zIndex: 1 },
-        overlayControl && { position: 'absolute', top: 8, right: 8, zIndex: 1, backgroundColor: colors.surface }, { opacity: pressed ? 0.7 : 1 }]}>
-      <Text variant="caption">{t(running ? 'pause' : 'resume')}</Text>
-    </Press>
-    {children}
-  </MotionContext.Provider>;
+/** Shimmer stays on while content loads; the OS "reduce motion" setting turns it off (see SkeletonBox). */
+export function SkeletonMotionControl({ children }: PropsWithChildren) {
+  return <MotionContext.Provider value={true}>{children}</MotionContext.Provider>;
 }
 
 type BoxProps = { width?: DimensionValue; height?: DimensionValue; style?: ViewStyle };
@@ -80,6 +68,4 @@ const styles = StyleSheet.create({
   heroText: { padding: spacing.xl, gap: spacing.lg },
   list: { flexDirection: 'row', gap: spacing.md, alignItems: 'center' },
   listText: { flex: 1, gap: spacing.sm },
-  control: { minHeight: 48, alignSelf: 'flex-start', justifyContent: 'center', paddingHorizontal: spacing.md,
-    borderWidth: 1, borderColor: colors['text-muted'], borderRadius: radius.chip },
 });
