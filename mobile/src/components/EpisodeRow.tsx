@@ -1,6 +1,6 @@
 import { DownloadButton } from './DownloadButton';
 import { View } from 'react-native';
-import { Image } from 'expo-image';
+import { EpisodeImage } from './EpisodeImage';
 import Icon from '@/components/Icon';
 import { router } from 'expo-router';
 import type { SeriesEpisode } from '@/api/types';
@@ -22,7 +22,7 @@ export function EpisodeRow({ episode, seriesSlug, seriesTitle, current = false, 
     style={{ flex: 1, height: 'auto', minHeight: 88, paddingVertical: 8, paddingHorizontal: 0, borderRadius: 10, backgroundColor: current ? colors.card : 'transparent' }}>
     <View style={{ flex: 1, gap: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <EpisodeThumbnail image={image} />
+        <EpisodeThumbnail slug={episode.slug} image={image} />
         <View style={{ flex: 1, gap: 4 }}>
           <Text variant="title" muted={watched}>{t('episodeLabel')} {episode.number}</Text><Text variant="caption" muted numberOfLines={2}>{title}</Text>
           {!!episode.date && <Text variant="caption" muted>{episode.date}</Text>}
@@ -35,9 +35,9 @@ export function EpisodeRow({ episode, seriesSlug, seriesTitle, current = false, 
   </Button><DownloadButton metadata={{ slug: episode.slug, seriesSlug, seriesTitle, episode: episode.number ?? '', poster: image ?? '' }} /></View>;
 }
 
-export function EpisodeThumbnail({ image, progress }: { image?: string | null; progress?: number }) {
+export function EpisodeThumbnail({ slug, image, progress }: { slug?: string | null; image?: string | null; progress?: number }) {
   return <View style={{ width: 128, height: 72, borderRadius: 6, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-    {image && <Image source={image} contentFit="cover" style={{ position: 'absolute', inset: 0 }} />}
+    <EpisodeImage slug={slug} fallback={image} style={{ position: 'absolute', inset: 0 }} />
     <View style={{ borderRadius: 20, backgroundColor: '#13151C99', padding: 6 }}><Icon name="play" size={22} color={colors.text} /></View>
     {progress !== undefined && <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, backgroundColor: colors.line }}><View style={{ height: 4, width: `${progress * 100}%`, backgroundColor: colors.brand }} /></View>}
   </View>;

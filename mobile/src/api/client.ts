@@ -8,6 +8,11 @@ export function withApiKey(url: string): string {
   return `${url}${url.includes('?') ? '&' : '?'}k=${encodeURIComponent(API_KEY)}`;
 }
 
+/** Server-generated frame from the episode (404 until one exists). */
+export function episodeThumbUrl(slug: string): string {
+  return withApiKey(`${API_URL}/api/thumb/${encodeURIComponent(slug)}`);
+}
+
 export class ApiError extends Error {
   constructor(message: string, public readonly status?: number) {
     super(message);
