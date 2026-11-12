@@ -186,3 +186,18 @@ these streams, sending `Referer: https://mirainime.com/` and forwarding Range.
 Signed URLs are IP-bound and their expiry parameter is encrypted; Mirainime
 episode and resolve responses are cached for only 15 seconds. Unsupported HLS
 and other hosts are skipped. No mobile changes are required.
+
+Mirainime rows reuse the series cover when no cached episode thumbnail exists;
+generating frames would spend signed playback requests while browsing. Download
+qualities are loaded only when the download sheet opens. The API accepts repeated
+identical access keys for installed clients that append a key to an already-keyed
+proxy URL; mixed or missing keys are still rejected. Updated clients set one key.
+
+## Cover delivery
+
+AniList cover URLs in `image` and `banner` are returned through `/api/cover` on the
+request's API origin, including the caller's access key. The server caches the
+original image bytes on disk, so devices need no direct AniList CDN connection.
+Only HTTPS files in AniList's anime cover directory are accepted; redirects and
+other hosts are rejected. Cached metadata is copied for each response so one
+caller's host or key never enters another caller's cached response.

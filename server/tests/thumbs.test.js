@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { frameArgs, playableUrls, thumbPath } from '../thumbs.js';
+import { frameArgs, playableUrls, thumbPath, getThumb } from '../thumbs.js';
 
 test('frameArgs seeks before the input and outputs one 480x270 frame', () => {
   const args = frameArgs('http://x/v.mp4', 330, '/tmp/o.jpg');
@@ -13,6 +13,10 @@ test('frameArgs seeks before the input and outputs one 480x270 frame', () => {
 test('thumbPath is stable and filesystem-safe', () => {
   assert.equal(thumbPath('od~a-episode-1'), thumbPath('od~a-episode-1'));
   assert.match(thumbPath('../../etc'), /[0-9a-f]{40}\.jpg$/);
+});
+
+test('uncached Mirainime thumbnails do not request signed playback streams', async () => {
+  await assert.rejects(getThumb('mn~test-thumbnail-quota~1', 'http://127.0.0.1:1'), /Thumbnail unavailable/);
 });
 
 test('playableUrls resolves mirrors in order, skips iframes and makes proxy URLs absolute', async () => {

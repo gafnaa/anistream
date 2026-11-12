@@ -5,7 +5,9 @@ const TIMEOUT_MS = 20_000;
 /** Adds the public-access key to URLs served by our API (playback proxy URLs too). */
 export function withApiKey(url: string): string {
   if (!API_KEY || !url.startsWith(`${API_URL}/`)) return url;
-  return `${url}${url.includes('?') ? '&' : '?'}k=${encodeURIComponent(API_KEY)}`;
+  const keyed = new URL(url);
+  keyed.searchParams.set('k', API_KEY);
+  return keyed.href;
 }
 
 /** Server-generated frame from the episode (404 until one exists). */

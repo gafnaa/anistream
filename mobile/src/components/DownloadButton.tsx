@@ -18,16 +18,13 @@ export function DownloadButton({ metadata }: { metadata: DownloadMetadata }) {
   return <NativeDownloadButton metadata={metadata} />;
 }
 function NativeDownloadButton({ metadata }: { metadata: DownloadMetadata }) {
-  const query = useDownloadOptions(metadata.slug);
   const records = useDownloads();
   const exists = records.some(item => item.slug === metadata.slug);
   const [open, setOpen] = useState(false);
-  const unavailable = query.isSuccess && !query.data.options.length;
   return <View style={{ alignItems: 'center' }}>
-    <Button variant="ghost" size="icon" disabled={unavailable || query.isPending || exists}
-      accessibilityLabel={t(unavailable ? 'downloadUnavailable' : exists ? 'downloadAdded' : 'downloadEpisode')}
-      accessibilityHint={unavailable ? t('downloadUnavailable') : undefined} onPress={() => { if (query.isError) void query.refetch(); else setOpen(true); }}>
-      <Download size={24} color={unavailable ? colors['text-muted'] : colors.text} />
+    <Button variant="ghost" size="icon" disabled={exists}
+      accessibilityLabel={t(exists ? 'downloadAdded' : 'downloadEpisode')} onPress={() => setOpen(true)}>
+      <Download size={24} color={colors.text} />
     </Button>
     <DownloadQualitySheet open={open} onClose={() => setOpen(false)} metadata={metadata} />
   </View>;

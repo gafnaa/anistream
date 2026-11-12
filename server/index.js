@@ -1,4 +1,6 @@
 import { MN_VIDEO_HOST } from './mirainime.js';
+import { validAccessKey } from './access.js';
+import { isCoverUrl, coverFile, coverResponse } from './artwork.js';
 import express from 'express';
 import { getSkipTimes } from './skip.js';
 import { enrichCovers } from './covers.js';
@@ -40,7 +42,7 @@ const hits = new Map();
 app.use((req, res, next) => {
   if (!req.get('tailscale-funnel-request')) return next();
   if (!req.path.startsWith('/api/')) return res.status(404).end();
-  if (!API_KEY || req.query.k !== API_KEY) return res.status(401).json({ error: 'Unauthorized' });
+  if (!validAccessKey(req.query.k, API_KEY)) return res.status(401).json({ error: 'Unauthorized' });
   const ip = (req.get('x-forwarded-for') || req.ip).split(',')[0].trim();
   const minute = Math.floor(Date.now() / 60_000);
   const hit = hits.get(ip);
@@ -54,7 +56,18 @@ app.use((req, res, next) => {
 });
 
 /** Query suffix that carries the caller's key into proxied URLs. */
-const keySuffix = (req) => (typeof req.query.k === 'string' ? `&k=${encodeURIComponent(req.query.k)}` : '');
+const keySuffix = (req) => {
+  const key = Array.isArray(req.query.k) ? req.query.k[0] : req.query.k;
+  return typeof key === 'string' ? `&k=${encodeURIComponent(key)}` : '';
+};
+
+app.use('/api', (req, res, next) => {
+  const json = res.json.bind(res);
+  const protocol = req.get('x-forwarded-proto')?.split(',')[0].trim() || (req.get('tailscale-funnel-request') ? 'https' : req.protocol);
+  const origin = `${protocol}://${req.get('host')}`;
+  res.json = value => json(coverResponse(value, origin, keySuffix(req)));
+  next();
+});
 
 /* ------------------------------------------------------------------ */
 /* tiny in-memory cache so we don't hammer the upstream on every nav   */
@@ -100,6 +113,14 @@ const wrap = (fn) => (req, res) => {
 /* ------------------------------------------------------------------ */
 /* API routes                                                          */
 /* ------------------------------------------------------------------ */
+app.get('/api/cover', wrap(async (req, res) => {
+  const url = String(req.query.url || '');
+  if (!isCoverUrl(url)) return res.status(400).json({ error: 'Invalid cover URL' });
+  const file = await coverFile(url);
+  res.set('Cache-Control', 'private, max-age=86400');
+  res.sendFile(fileURLToPath(file), { dotfiles: 'allow' });
+}));
+
 app.get('/api/skip', async (req, res) => {
   res.json(await getSkipTimes(req.query.title, req.query.episode, req.query.duration));
 });

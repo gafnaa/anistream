@@ -67,6 +67,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "test:api": "node --experimental-transform-types --test tests/api-client.test.mjs",
     "typecheck": "tsc --noEmit",
     "test:downloads": "node --experimental-strip-types --test tests/download-queue.test.mjs",
     "test:update": "node --experimental-strip-types --test tests/update.test.mjs"
