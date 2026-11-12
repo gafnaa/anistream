@@ -2,6 +2,11 @@ import { getSettings } from '@/storage/settings';
 import { getLocales } from 'expo-localization';
 
 const en = {
+  updateAvailable: 'Update available', updateNow: 'Update', updateLater: 'Later',
+  updateChecking: 'Checking for updates…', updateLatest: 'You are using the latest version',
+  updateDownloading: 'Downloading', updateError: 'Could not download or open the installer. Try again or download in your browser.',
+  updateBrowser: 'Download in browser', updateCheckError: 'Could not check for updates. Try again.', updateNoNotes: 'No release notes available.',
+
   etaMinutes: 'minutes left',
   downloads: 'Downloads', downloadEpisode: 'Download episode', downloadUnavailable: 'This episode cannot be downloaded yet',
   downloadAdded: 'Already in downloads', wifiOnly: 'Only over Wi-Fi', wifiWaiting: 'Waiting for Wi-Fi', networkWaiting: 'Waiting for a connection',
@@ -205,6 +210,11 @@ const en = {
 } as const;
 type Dictionary = { [K in keyof typeof en]: string };
 const id: Dictionary = {
+  updateAvailable: 'Pembaruan tersedia', updateNow: 'Perbarui', updateLater: 'Nanti',
+  updateChecking: 'Memeriksa pembaruan…', updateLatest: 'Kamu sudah memakai versi terbaru',
+  updateDownloading: 'Mengunduh', updateError: 'Gagal mengunduh atau membuka pemasang. Coba lagi atau unduh melalui browser.',
+  updateBrowser: 'Unduh melalui browser', updateCheckError: 'Gagal memeriksa pembaruan. Silakan coba lagi.', updateNoNotes: 'Catatan rilis belum tersedia.',
+
   etaMinutes: 'menit lagi',
   downloads: 'Unduhan', downloadEpisode: 'Unduh episode', downloadUnavailable: 'Episode ini belum bisa diunduh',
   downloadAdded: 'Sudah dalam unduhan', wifiOnly: 'Hanya melalui Wi-Fi', wifiWaiting: 'Menunggu Wi-Fi', networkWaiting: 'Menunggu koneksi',
@@ -243,7 +253,7 @@ const id: Dictionary = {
   version: "Versi",
   source: "Proyek di GitHub",
   licences: "Lisensi sumber terbuka",
-  updates: "Periksa pembaruan",
+  updates: "Cek pembaruan",
   contentDisclaimer: "Tentang konten",
   disclaimer: "AniStream tidak menyimpan video. Ketersediaan konten mengikuti sumber penyedia.",
   onboardTitle: "Dunia seperti apa yang kamu suka?",
