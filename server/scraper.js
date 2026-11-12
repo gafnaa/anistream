@@ -448,11 +448,15 @@ async function resolveOdEmbed(url, signal, depth = 0) {
     return { type: parsed.pathname.endsWith('.mp4') ? 'mp4' : 'hls', url };
   }
   // Only inspect the verified public player. Other hosts may require challenges.
-  if (!/(^|\.)desustream\.net$/i.test(parsed.hostname)) throw new Error('Unverified embed host');
+  if (!/(^|\.)desustream\.(net|com)$/i.test(parsed.hostname)) throw new Error('Unverified embed host');
   const html = await odFetch(url, signal);
   if (/captcha|cf-chl-|challenge-platform|attestation/i.test(html)) throw new Error('Embed requires challenge');
   const file = html.match(/https?:\/\/[^"'\s<>]+\.(?:mp4|m3u8)(?:\?[^"'\s<>]*)?/i)?.[0];
   if (file) return resolveOdEmbed(file.replace(/&amp;/g, '&'), signal, depth + 1);
+  // Older "otakuwatch" mirrors play a Blogger file from googlevideo.com. That URL is
+  // bound to this server's IP, so clients must stream it through /api/video.
+  const google = html.match(/https:\/\/[^"'\s<>]+\.googlevideo\.com\/videoplayback\?[^"'\s<>]+/)?.[0];
+  if (google) return { type: 'mp4', url: google.replace(/&amp;/g, '&'), proxied: true };
   const $ = cheerio.load(html);
   const inner = $('iframe[src]').first().attr('src');
   if (inner && depth < 2) return resolveOdEmbed(new URL(inner, url).href, signal, depth + 1);
@@ -476,7 +480,7 @@ async function getOtakudesuSources(title, number, signal) {
   const page = cheerio.load(html);
   const mirrors = [];
   page('a[data-content]').each((_, el) => {
-    if (!/^(odcdn|odstream)$/i.test(clean(page(el).text()))) return;
+    if (!/^(odcdn|odstream|otakuwatch\w*)$/i.test(clean(page(el).text()))) return;
     try {
       const data = JSON.parse(Buffer.from(page(el).attr('data-content'), 'base64').toString());
       if (Number.isInteger(data.id) && Number.isInteger(data.i) && /^(360|480|720|1080)p$/.test(data.q)) mirrors.push(data);
@@ -486,7 +490,13 @@ async function getOtakudesuSources(title, number, signal) {
   const add = async (url, quality) => {
     const stream = await resolveOdEmbed(url, signal);
     const actualQuality = stream.url.match(/[_-](\d{3,4}p)\./)?.[1] || quality;
-    results.push({ label: `OD ${actualQuality || 'default'}`, provider: 'otakudesu', quality: actualQuality || null,
+    const label = `OD ${actualQuality || 'default'}`;
+    // The googlevideo URL expires and is IP-bound: list the embed page and let /api/resolve proxy it.
+    if (stream.proxied) {
+      results.push({ label, provider: 'otakudesu', quality: actualQuality || null, kind: 'resolvable', url, host: new URL(url).hostname });
+      return;
+    }
+    results.push({ label, provider: 'otakudesu', quality: actualQuality || null,
       type: stream.type, kind: stream.type === 'iframe' ? 'iframe' : 'resolvable', url: stream.url, host: new URL(stream.url).hostname });
   };
   const defaultUrl = page('#pembed iframe').attr('src');
@@ -600,7 +610,7 @@ export async function resolveMirror(mirrorUrl) {
   } catch {
     throw new Error('Invalid mirror URL');
   }
-  if (/(^|\.)(desustream\.net|odcloud\.net|archive\.org)$/.test(host)) {
+  if (/(^|\.)(desustream\.(net|com)|odcloud\.net|archive\.org)$/.test(host)) {
     return resolveOdEmbed(mirrorUrl, AbortSignal.timeout(6000));
   }
   if (host.includes('blogger.com')) {
