@@ -155,16 +155,16 @@ test('parallel search prefers primary duplicates and tolerates either source fai
   const original = globalThis.fetch;
   const primary = '<div class="listupd"><article class="bs"><a itemprop="url" href="https://samehadaku.li/anime/oregairu/"></a><h2 itemprop="headline">Oregairu</h2></article></div><div class="hpage"><a class="r"></a></div>';
   try {
-    for (const failing of [null, 'samehadaku', 'otakudesu']) {
+    for (const failing of [null, 'samehadaku', 'otakudesu', 'mirainime']) {
       const called = [];
       globalThis.fetch = async url => {
-        const source = String(url).includes('samehadaku') ? 'samehadaku' : 'otakudesu';
+        const source = String(url).includes('samehadaku') ? 'samehadaku' : String(url).includes('mirainime') ? 'mirainime' : 'otakudesu';
         called.push(source);
         if (source === failing) throw new Error('Unavailable');
-        return new Response(source === 'samehadaku' ? primary : fixture('search'));
+        return new Response(source === 'samehadaku' ? primary : source === 'mirainime' ? '<div class="ctx-card" data-ctx-type="anime"><h3><a href="/anime/oregairu">Oregairu</a></h3></div>' : fixture('search'));
       };
       const result = await search('oregairu');
-      assert.deepEqual(called.sort(), ['otakudesu', 'samehadaku']);
+      assert.deepEqual(called.sort(), ['mirainime', 'otakudesu', 'samehadaku']);
       assert.equal(result.items.length, failing === 'otakudesu' ? 1 : 3);
       assert.equal(result.items.find(item => item.title === 'Oregairu').slug,
         failing === 'samehadaku' ? 'od~ogairu-subtitle-indonesia' : 'oregairu');
