@@ -98,8 +98,14 @@ re-scrape the upstream site every time.
 
 ## Otakudesu fallback
 
-The catalogue and episode metadata still come from samehadaku. Episode requests
-also search otakudesu.blog in parallel, with a six-second deadline. Normalized
+Search queries run against samehadaku and otakudesu.blog in parallel. Samehadaku
+results take precedence over normalized title duplicates, and either source can
+fail independently. Otakudesu-only titles use `od~` series and episode slugs;
+series metadata and episode navigation then come directly from Otakudesu. The
+namespace suffix is restricted to lowercase letters, digits and hyphens.
+
+Samehadaku episode requests also search otakudesu.blog in parallel, with a
+six-second deadline. Normalized
 titles must match all words and the season, and the episode number must match
 exactly. Confirmed anime matches and search misses are cached for 24 hours;
 timeouts and upstream errors are retried on later requests.
