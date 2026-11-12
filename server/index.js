@@ -158,7 +158,7 @@ app.get('/api/resolve', wrap(async (req, res) => {
     return res.status(400).json({ error: 'Invalid mirror URL' });
   }
 
-  const allowed = /(^|\.)(xtwap\.top|blogger\.com|samehadaku\.li|ok\.ru|dailymotion\.com|youtube\.com|youtu\.be|drive\.google\.com|desustream\.net$|odcloud\.net$|filemoon|acefile|bilibili)/i;
+  const allowed = /(^|\.)(xtwap\.top|blogger\.com|samehadaku\.li|ok\.ru|dailymotion\.com|youtube\.com|youtu\.be|drive\.google\.com|desustream\.net$|odcloud\.net$|archive\.org$|filemoon|acefile|bilibili)/i;
   if (!allowed.test(host)) {
     return res.status(400).json({ error: `Mirror host not allowed: ${host}` });
   }
