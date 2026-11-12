@@ -6,6 +6,9 @@ cd "$(dirname "$0")"
 
 PORT="${1:-5178}"
 
+# Secrets (ANISTREAM_KEY) live in the gitignored .env.local.
+if [ -f .env.local ]; then set -a; . ./.env.local; set +a; fi
+
 # Stop any previous instance bound to this port.
 for pid in $(pgrep -f "node server/index.js" 2>/dev/null); do
   kill "$pid" 2>/dev/null || true

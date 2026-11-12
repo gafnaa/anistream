@@ -1,5 +1,12 @@
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'https://waf-server.tail1ec650.ts.net:5175').replace(/\/+$/, '');
+const API_KEY = process.env.EXPO_PUBLIC_API_KEY || '';
 const TIMEOUT_MS = 20_000;
+
+/** Adds the public-access key to URLs served by our API (playback proxy URLs too). */
+export function withApiKey(url: string): string {
+  if (!API_KEY || !url.startsWith(`${API_URL}/`)) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}k=${encodeURIComponent(API_KEY)}`;
+}
 
 export class ApiError extends Error {
   constructor(message: string, public readonly status?: number) {
@@ -22,7 +29,7 @@ export async function apiGet<T>(path: string, params: Record<string, string | nu
   try {
     // URLSearchParams.size is not available on every React Native runtime; toString() is.
     const qs = query.toString();
-    const response = await fetch(`${API_URL}${path}${qs ? `?${qs}` : ''}`, { signal: controller.signal });
+    const response = await fetch(withApiKey(`${API_URL}${path}${qs ? `?${qs}` : ''}`), { signal: controller.signal });
     let body: unknown;
     try { body = await response.json(); } catch {
       throw new ApiError('The API returned an invalid JSON response.', response.status);

@@ -20,6 +20,34 @@ const PORT = process.env.PORT || 5178;
 app.use(express.json());
 
 /* ------------------------------------------------------------------ */
+/* public (Tailscale Funnel) access: API only, key + rate limit        */
+/* ------------------------------------------------------------------ */
+// Funnel marks proxied internet traffic with this header; tailnet and
+// localhost requests stay open as before.
+const API_KEY = process.env.ANISTREAM_KEY || '';
+const RATE_LIMIT = 1200; // requests per IP per minute (HLS fetches many segments)
+const hits = new Map();
+
+app.use((req, res, next) => {
+  if (!req.get('tailscale-funnel-request')) return next();
+  if (!req.path.startsWith('/api/')) return res.status(404).end();
+  if (!API_KEY || req.query.k !== API_KEY) return res.status(401).json({ error: 'Unauthorized' });
+  const ip = (req.get('x-forwarded-for') || req.ip).split(',')[0].trim();
+  const minute = Math.floor(Date.now() / 60_000);
+  const hit = hits.get(ip);
+  if (!hit || hit.minute !== minute) {
+    if (hits.size > 10_000) hits.clear();
+    hits.set(ip, { minute, count: 1 });
+  } else if (++hit.count > RATE_LIMIT) {
+    return res.status(429).json({ error: 'Too many requests' });
+  }
+  next();
+});
+
+/** Query suffix that carries the caller's key into proxied URLs. */
+const keySuffix = (req) => (typeof req.query.k === 'string' ? `&k=${encodeURIComponent(req.query.k)}` : '');
+
+/* ------------------------------------------------------------------ */
 /* tiny in-memory cache so we don't hammer the upstream on every nav   */
 /* ------------------------------------------------------------------ */
 const cache = new Map();
@@ -122,7 +150,7 @@ app.get('/api/resolve', wrap(async (req, res) => {
   // Access-Control-Allow-Origin: https://play.xtwap.top only, so the
   // browser can never load these segments on its own.
   if (stream.type === 'hls') {
-    stream.playUrl = `/api/hls?url=${encodeURIComponent(stream.url)}`;
+    stream.playUrl = `/api/hls?url=${encodeURIComponent(stream.url)}${keySuffix(req)}`;
   } else {
     stream.playUrl = stream.url;
   }
@@ -146,9 +174,9 @@ function assertAllowed(target) {
 }
 
 /** Rewrite a manifest so every child URI points back through this proxy. */
-function rewriteManifest(body, baseUrl) {
+function rewriteManifest(body, baseUrl, suffix = '') {
   const base = new URL(baseUrl);
-  const proxy = (abs) => `/api/hls?url=${encodeURIComponent(abs)}`;
+  const proxy = (abs) => `/api/hls?url=${encodeURIComponent(abs)}${suffix}`;
   const abs = (uri) => new URL(uri, base).toString();
 
   return body
@@ -209,7 +237,7 @@ app.get('/api/hls', wrap(async (req, res) => {
   if (isManifest) {
     const text = await upstream.text();
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-    return res.send(rewriteManifest(text, url.toString()));
+    return res.send(rewriteManifest(text, url.toString(), keySuffix(req)));
   }
 
   // Binary segment / key / init segment: stream it straight through.

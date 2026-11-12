@@ -8,7 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as Orientation from 'expo-screen-orientation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useEpisode, useResolvedSource, useSeries } from '@/api';
-import { API_URL } from '@/api/client';
+import { API_URL, withApiKey } from '@/api/client';
 import { useSettings } from '@/storage/settings';
 import { addHistory, useHistory, useHistoryHydrated } from '@/storage';
 import { Text } from '@/components/Text';
@@ -150,7 +150,7 @@ function OnlineWatchScreen({ slug, previewNext = false }: { slug: string; previe
           retry();
         }}><Text>{t('retry')}</Text></Button><Button variant="secondary" onPress={goBack}><Text>{t('back')}</Text></Button></View>
       </View> : source && historyHydrated ? source.type === 'iframe' ? <><EmbedPlayer url={source.url} onError={fail} />{chrome}</> :
-        <NativePlayer key={`${index}-${attempt}`} url={new URL(source.playUrl || source.url, `${API_URL}/`).href} type={source.type}
+        <NativePlayer key={`${index}-${attempt}`} url={withApiKey(new URL(source.playUrl || source.url, `${API_URL}/`).href)} type={source.type}
           resume={resume} onSave={save} onError={fail}
           onNext={settings.autoplayNext && episode.data?.nextSlug ? next : undefined} previewNext={previewNext}>{chrome}</NativePlayer>
         : <View style={styles.error}><ActivityIndicator color={colors.text} />{chrome}</View>}
