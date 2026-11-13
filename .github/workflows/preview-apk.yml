@@ -1,0 +1,40 @@
+name: Preview APK
+
+# Push a branch named preview/* to build a release-mode APK on EAS without
+# publishing it, so a release candidate can be smoke-tested on an emulator.
+on:
+  push:
+    branches: ['preview/**']
+  workflow_dispatch:
+
+jobs:
+  android:
+    name: Android preview APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Build on EAS
+        id: build
+        run: |
+          eas build --platform android --profile preview --non-interactive --wait --json > build.json
+          echo "url=$(node -p "require('./build.json')[0].artifacts.buildUrl")" >> "$GITHUB_OUTPUT"
+      - name: Download APK
+        run: curl -fsSL -o anistream-preview.apk "${{ steps.build.outputs.url }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: anistream-preview-apk
+          path: mobile/anistream-preview.apk
+          retention-days: 7
