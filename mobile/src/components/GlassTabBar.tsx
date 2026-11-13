@@ -12,7 +12,7 @@ export const TabBlurTarget = createContext<Record<string, RefObject<ComponentRef
 export const TAB_BAR_HEIGHT = 60;
 export function useTabBarInset() { return TAB_BAR_HEIGHT + useSafeAreaInsets().bottom + 28; }
 
-export function GlassTabBar({ state, descriptors, emitter, navigateToTab }: BottomTabBarProps) {
+export function GlassTabBar({ state, descriptors, emitter, navigateToTab }: Omit<BottomTabBarProps, 'descriptors'> & { descriptors: Record<string, { options: BottomTabBarProps['descriptors'][string]['options'] }> }) {
   const { bottom } = useSafeAreaInsets();
   const [edge, setEdge] = useState(16);
   const [focusedTab, setFocusedTab] = useState<string | null>(null);

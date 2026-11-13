@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { AmbientBackground } from './AmbientBackground';
 import { Text } from './Text';
 import Icon from './Icon';
+import { UserAvatar } from './UserAvatar';
 import { Button } from './ui/button';
 import { colors } from '@/theme';
 import { t } from '@/i18n';
@@ -14,7 +15,7 @@ export function ActivityLayout({ children }: PropsWithChildren) {
 }
 export function ActivityEmpty({ history = false }: { history?: boolean }) {
   return <View style={{ alignItems: 'center', paddingHorizontal: 24, paddingTop: history ? 160 : 48, gap: 24 }}>
-    <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' }}><Icon name={history ? 'time' : 'person'} size={36} color={colors.text} /></View>
+    <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' }}>{history ? <Icon name="time" size={36} color={colors.text} /> : <UserAvatar size={80} />}</View>
     <Text variant="h1" style={{ textAlign: 'center', maxWidth: 300 }}>{t(history ? 'historyEmpty' : 'listEmpty')}</Text>
     <Text muted style={{ textAlign: 'center' }}>{t(history ? 'historyEmptyHint' : 'listEmptyHint')}</Text>
     <Button onPress={() => router.navigate('/(tabs)/discover')} style={{ marginTop: 16, borderRadius: 24 }}><Text variant="title">{t('browseAnime')}</Text></Button>

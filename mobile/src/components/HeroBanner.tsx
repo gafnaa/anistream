@@ -72,7 +72,6 @@ export function HeroBanner({ items }: { items: TrendingCard[] }) {
   const [index, setIndex] = useState(0);
   const [touched, setTouched] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [paused, setPaused] = useState(false);
   const [delay, setDelay] = useState(5000);
   const [interaction, setInteraction] = useState(0);
   const [active, setActive] = useState(AppState.currentState === 'active');
@@ -114,13 +113,13 @@ export function HeroBanner({ items }: { items: TrendingCard[] }) {
     return () => subscription.remove();
   }, []);
   useEffect(() => {
-    if (touched || dragging || paused || reducedMotion || !focused || !active || confirmRemoval || titles.length < 2) return;
+    if (touched || dragging || reducedMotion || !focused || !active || confirmRemoval || titles.length < 2) return;
     const timer = setTimeout(() => {
       move(current + 1);
       setDelay(5000);
     }, delay);
     return () => clearTimeout(timer);
-  }, [touched, dragging, paused, reducedMotion, focused, active, confirmRemoval, titles.length, current, delay, interaction, move]);
+  }, [touched, dragging, reducedMotion, focused, active, confirmRemoval, titles.length, current, delay, interaction, move]);
   const page = useRef(current);
   useEffect(() => {
     page.current = current;
@@ -150,7 +149,7 @@ export function HeroBanner({ items }: { items: TrendingCard[] }) {
       .then(() => setConfirmRemoval(false)).catch(() => setStorageError(true));
   };
   return <View style={{ height, backgroundColor: colors.surface, overflow: 'hidden' }}
-    onPointerDown={() => setTouched(true)} onPointerUp={release} onPointerCancel={release}
+    onPointerDown={() => { blockTabSwipe(); setTouched(true); }} onPointerUp={release} onPointerCancel={release}
     onTouchStart={() => { blockTabSwipe(); setTouched(true); }} onTouchEnd={release} onTouchCancel={release}>
     <Animated.ScrollView ref={scroll} horizontal pagingEnabled={Platform.OS !== 'web' || !touched} showsHorizontalScrollIndicator={false}
       testID="hero-carousel" scrollEventThrottle={16} onScroll={onScroll}
@@ -210,11 +209,6 @@ export function HeroBanner({ items }: { items: TrendingCard[] }) {
           <Button size="icon" variant="ghost" accessibilityLabel={t('previousTitle')} style={{ position: 'absolute', left: 0, bottom: -18 }} onPress={() => { move(current - 1); release(); }}><Icon name="chevron-back" size={24} color={colors['text-muted']} /></Button>
           <Button size="icon" variant="ghost" accessibilityLabel={t('nextTitle')} style={{ position: 'absolute', right: 0, bottom: -18 }} onPress={() => { move(current + 1); release(); }}><Icon name="chevron-forward" size={24} color={colors['text-muted']} /></Button>
         </>}
-        {titles.length > 1 && !reducedMotion && <Button size="icon" variant="ghost" accessibilityLabel={t(paused ? 'resumeHero' : 'pauseHero')}
-          style={{ position: 'absolute', right: 48, bottom: -18 }} accessibilityState={{ selected: paused }} onPress={() => setPaused(value => !value)}>
-          <Icon name={paused ? 'play' : 'pause'} color={colors.text} size={24} />
-        </Button>}
-
       </View>
     </View>
     <RemovalDialog open={confirmRemoval} onOpenChange={setConfirmRemoval} title={t('removeBookmark')}

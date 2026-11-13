@@ -6,6 +6,8 @@
 - Icons: https://github.com/lucide-icons/lucide (ISC; original SVGs included)
 - Fonts: https://fonts.google.com/specimen/Plus+Jakarta+Sans and https://fonts.google.com/specimen/Inter (OFL)
 
+- Avatars: https://blobatar.dev (blobatar and @blobatar/react-native 2.7.0, MIT)
+
 ## Sample artwork
 
 Artwork is sample catalogue imagery for design review; original rights remain with the respective owners.

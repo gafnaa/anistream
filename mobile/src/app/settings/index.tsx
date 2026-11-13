@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { Platform, View } from 'react-native';
 import { SettingsLayout, SettingsRow, SettingsDivider } from '@/components/SettingsLayout';
+import { UserAvatar } from '@/components/UserAvatar';
 import { Text } from '@/components/Text';
 import { Switch } from '@/components/ui/switch';
 import { Toast } from '@/components/ui/toast';
@@ -14,6 +15,7 @@ export default function SettingsScreen() {
   const settings = useSettings(); const [error, setError] = useState(false);
   const save = (value: Partial<Settings>) => { setError(false); void updateSettings(value).catch(() => setError(true)); };
   return <SettingsLayout title={t('settings')}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><UserAvatar /><Text variant="h2">{t('me')}</Text></View>
     <Text variant="h2">{t('playback')}</Text>
     <SettingsRow label={t('autoplay')} hint={t('autoplayHint')}><Switch accessibilityLabel={t('autoplay')} value={settings.autoplayNext} onValueChange={autoplayNext => save({ autoplayNext })} /></SettingsRow>
     <SettingsRow label={t('resumeSetting')} hint={t('resumeHint')}><Switch accessibilityLabel={t('resumeSetting')} value={settings.resume} onValueChange={resume => save({ resume })} /></SettingsRow>
