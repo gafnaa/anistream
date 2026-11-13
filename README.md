@@ -2,7 +2,7 @@
 
 # AniStream
 
-**Anime streaming app with Indonesian subtitles. A React Native mobile app and a web prototype, backed by a samehadaku scraping API.**
+**Anime streaming app with Indonesian subtitles. A React Native mobile app and a web prototype, backed by a shared API.**
 
 [![CI](https://github.com/gafnaa/anistream/actions/workflows/ci.yml/badge.svg)](https://github.com/gafnaa/anistream/actions/workflows/ci.yml)
 [![Release](https://github.com/gafnaa/anistream/actions/workflows/release.yml/badge.svg)](https://github.com/gafnaa/anistream/actions/workflows/release.yml)
@@ -16,8 +16,8 @@
 
 ## Overview
 
-AniStream lets you browse, search, and watch anime from samehadaku without its
-ads, pop-ups and desktop-first layout. The repo has three parts:
+AniStream lets you browse, search, and watch anime through a mobile-first
+interface. The repo has three parts:
 
 | Part | Path | Stack | Status |
 |---|---|---|---|
@@ -40,15 +40,15 @@ ads, pop-ups and desktop-first layout. The repo has three parts:
 ┌──────────────────────┐
 │ Mobile app (Expo)    │──┐
 └──────────────────────┘  │  JSON + HLS   ┌──────────────────────┐  HTML / HLS  ┌──────────────┐
-                          ├─────────────▶ │ AniStream API        │ ───────────▶ │ samehadaku   │
+                          ├─────────────▶ │ AniStream API        │ ───────────▶ │ Content      │
 ┌──────────────────────┐  │               │ scraper · resolver · │              │ + video CDNs │
 │ Web prototype (Vite) │──┘               │ HLS proxy            │              └──────────────┘
 └──────────────────────┘                  └──────────────────────┘
 ```
 
-Both clients call the same API. Scraping and stream resolution stay on the
-server, because the video CDN only allows its own origin, which blocks direct
-browser playback, and samehadaku's markup changes often. Details are in
+Both clients call the same API. Catalogue retrieval, stream resolution and
+playback proxying stay on the server, keeping external integrations out of the
+clients. Details are in
 [`docs/BACKEND.md`](docs/BACKEND.md).
 
 ## Getting started
@@ -87,7 +87,7 @@ npx expo start            # scan the QR code with Expo Go, or press "a" for an A
 │   ├── app.json · eas.json  #   app + EAS build config
 │   └── AGENTS.md            #   Expo-specific agent rules
 ├── server/
-│   ├── scraper.js           # all samehadaku HTML parsing
+│   ├── scraper.js           # catalogue and episode retrieval
 │   └── index.js             # Express API, mirror resolver, HLS proxy
 ├── src/                     # web prototype (React + Vite)
 ├── docs/
@@ -109,14 +109,12 @@ npx expo start            # scan the QR code with Expo Go, or press "a" for an A
 | `GET /api/genres` | `[{ slug, name, count? }]` from the catalogue filter; cached 24 hours |
 | `GET /api/search?q=&page=` | Search results |
 | `GET /api/series/:slug` | Series metadata, `genres: string[]`, `genreLinks: [{ slug, name }]`, and episode list |
-| `GET /api/episode/:slug` | Episode info and mirrors; OD fallback sources add `provider`, `quality`, `type` |
+| `GET /api/episode/:slug` | Episode info and available sources, with optional quality and playback type |
 | `GET /api/resolve?mirror=` | Playable source: `hls`, `mp4` or `iframe` |
 | `GET /api/hls?url=` | Proxied HLS manifest or segment |
 
-Episode sources try Otakudesu direct streams by descending quality, then Blogger,
-then xtwap. Otakudesu lookup has a six-second deadline and caches conservative
-anime matches (including misses) for 24 hours. Failure preserves samehadaku mirrors.
-OD MP4s play directly without the proxy.
+The API resolves available sources into direct streams or embedded players.
+Playback supports automatic source switching when a stream fails.
 
 The full reference is in [`docs/BACKEND.md`](docs/BACKEND.md#api).
 
@@ -162,8 +160,8 @@ page and install it on an Android device.
 
 ## Disclaimer
 
-AniStream hosts no content. It reads publicly available pages from a
-third-party site at request time. All titles, artwork and video belong to their
+AniStream hosts no content. It retrieves catalogue and playback information from
+external sources at request time. All titles, artwork and video belong to their
 respective rights holders. This is a private project and is not for public
 distribution.
 
