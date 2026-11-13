@@ -82,7 +82,7 @@ function AlertDialogHeader({ className, ...props }: ViewProps) {
 function AlertDialogFooter({ className, ...props }: ViewProps) {
   return (
     <View
-      className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)}
+      className={cn('flex flex-row items-stretch justify-end gap-3', className)}
       {...props}
     />
   );
