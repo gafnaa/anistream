@@ -5,6 +5,7 @@ import { Platform, View } from 'react-native';
 import { useDownloads } from '@/downloads/store';
 import { ActivityLayout, ActivityEmpty } from '@/components/ActivityLayout';
 import { PosterGrid } from '@/components/PosterGrid';
+import { UserAvatar } from '@/components/UserAvatar';
 import { Text } from '@/components/Text';
 import Icon from '@/components/Icon';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ export default function Me() {
   const items = [...bookmarks].sort((a, b) => az ? a.title.localeCompare(b.title) : b.addedAt - a.addedAt).map(item => ({ ...item, image: item.poster }));
   const seconds = history.reduce((total, item) => total + Math.max(0, Math.min(item.position, item.duration > 0 ? item.duration : item.position)), 0);
   return <ActivityLayout><PosterGrid items={items} loading={!hydrated} retry={() => undefined} onLongPress={item => { setError(false); setRemoval(bookmarks.find(saved => saved.slug === item.slug) ?? null); }} tabScreen empty={<ActivityEmpty />}
-    header={<View style={{ paddingTop: 24, gap: 24, paddingBottom: 20 }}><View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><Text variant="h1" accessibilityRole="header">{t('me')}</Text><Button variant="ghost" size="icon" accessibilityLabel={t('settings')} onPress={() => router.push('/settings')}><Settings color={colors.text} size={24} /></Button></View>
+    header={<View style={{ paddingTop: 24, gap: 24, paddingBottom: 20 }}><View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><UserAvatar /><Text variant="h1" accessibilityRole="header">{t('me')}</Text></View><Button variant="ghost" size="icon" accessibilityLabel={t('settings')} onPress={() => router.push('/settings')}><Settings color={colors.text} size={24} /></Button></View>
       <View style={{ flexDirection: 'row', paddingVertical: 24, paddingHorizontal: 20, backgroundColor: colors.card, borderRadius: 10 }}>
         <View style={{ width: '50%', gap: 8 }}><Text variant="display" tabular>{history.filter(item => item.position > 0).length}</Text><Text variant="caption" muted>{t('episodesWatched')}</Text></View>
         <View style={{ width: '50%', borderLeftWidth: 1, borderColor: colors.line, paddingLeft: 20, gap: 8 }}><Text variant="display" tabular>{Math.round(seconds / 360) / 10} {t('hours')}</Text><Text variant="caption" muted>{t('watchTime')}</Text></View>

@@ -2,9 +2,18 @@ import { router } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 import { Button } from './ui/button';
 import { Text } from './Text';
+import { useBlockTabSwipe } from './SwipeTabScreen';
+import { colors } from '@/theme';
 import { fallbackGenres } from '@/api/genres';
 import type { Genre } from '@/api/types';
 import { t, type TranslationKey } from '@/i18n';
+
+export function FilterChip({ label, selected = false, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
+  return <Button variant="secondary" size="sm" accessibilityState={{ selected }} onPress={onPress}
+    style={{ height: 38, minHeight: 38, borderRadius: 19, paddingHorizontal: 14, backgroundColor: selected ? colors.primary : colors.card }}>
+    <Text variant="caption" style={{ color: selected ? '#FFFFFF' : colors['text-muted'] }}>{label}</Text>
+  </Button>;
+}
 
 export const quickFilters: { label: TranslationKey; params: { status?: string; type?: string } }[] = [
   { label: 'filterOngoing', params: { status: 'ongoing' } },
@@ -14,11 +23,10 @@ export const quickFilters: { label: TranslationKey; params: { status?: string; t
   { label: 'filterOVA', params: { type: 'ova' } },
 ];
 export function QuickFilters() {
-  return <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-    {quickFilters.map(filter => <Button key={filter.label} variant="secondary" size="sm" style={{ minWidth: 90, borderRadius: 6 }}
-      onPress={() => router.push({ pathname: '/browse', params: filter.params })}>
-      <Text variant="caption">{t(filter.label)}</Text>
-    </Button>)}
+  const blockTabSwipe = useBlockTabSwipe();
+  return <ScrollView onTouchStart={blockTabSwipe} onPointerDown={blockTabSwipe} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+    {quickFilters.map(filter => <FilterChip key={filter.label} label={t(filter.label)}
+      onPress={() => router.push({ pathname: '/browse', params: filter.params })} />)}
   </ScrollView>;
 }
 export function GenreSuggestions({ genres = fallbackGenres }: { genres?: Genre[] }) {

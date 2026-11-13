@@ -24,7 +24,7 @@ export function Row<T>({ title, items, renderItem, itemKey, loading = false, err
     {(error || offline) && items.length === 0 ? <View style={{ paddingHorizontal: 24, gap: 8 }}><Text muted>{t(offline ? 'offlineTitle' : 'rowError')}</Text>
       {retry && <ActionButton label={t('retry')} onPress={retry} />}</View>
       : items.length === 0 ? <Text muted style={{ paddingHorizontal: 24 }}>{t('emptyRow')}</Text>
-      : <FlatList horizontal onTouchStart={blockTabSwipe} data={items} keyExtractor={itemKey} renderItem={({ item }) => renderItem(item)}
+      : <FlatList horizontal onTouchStart={blockTabSwipe} onPointerDown={blockTabSwipe} data={items} keyExtractor={itemKey} renderItem={({ item }) => renderItem(item)}
         contentContainerStyle={{ paddingHorizontal: 24, gap: 12 }} showsHorizontalScrollIndicator={false}
         initialNumToRender={4} maxToRenderPerBatch={5} windowSize={3} onEndReached={onEndReached} onEndReachedThreshold={0.5} />}
   </View>;

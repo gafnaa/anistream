@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 
-export type Settings = { language: 'id' | 'en' | 'system'; autoplayNext: boolean; resume: boolean; onboarded: boolean; wifiOnly: boolean };
+export type Settings = { language: 'id' | 'en' | 'system'; autoplayNext: boolean; resume: boolean; onboarded: boolean; wifiOnly: boolean; profileId?: string };
 const defaults: Settings = { language: 'system', autoplayNext: true, resume: true, onboarded: false, wifiOnly: true };
 let settings = defaults;
 let hydrated = false;
@@ -10,10 +10,13 @@ const emit = () => listeners.forEach(listener => listener());
 const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
 export const settingsReady = AsyncStorage.getItem('anistream.settings.v1').then(raw => {
   const value = raw ? JSON.parse(raw) : {};
-  settings = { language: ['id', 'en', 'system'].includes(value?.language) ? value.language : 'system',
+  const profileId = typeof value?.profileId === 'string' && value.profileId ? value.profileId
+    : `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  settings = { profileId, language: ['id', 'en', 'system'].includes(value?.language) ? value.language : 'system',
     autoplayNext: typeof value?.autoplayNext === 'boolean' ? value.autoplayNext : true,
     resume: typeof value?.resume === 'boolean' ? value.resume : true, onboarded: value?.onboarded === true, wifiOnly: value?.wifiOnly !== false };
-}).catch(() => undefined).finally(() => { hydrated = true; emit(); });
+  if (value?.profileId !== profileId) return AsyncStorage.setItem('anistream.settings.v1', JSON.stringify(settings));
+}).catch(() => { settings = { ...settings, profileId: undefined }; }).finally(() => { hydrated = true; emit(); });
 let pending = Promise.resolve();
 export function updateSettings(change: Partial<Settings>) {
   const operation = pending.then(async () => {
