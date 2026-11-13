@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
+import { useBlockTabSwipe } from './SwipeTabScreen';
 import { AppState, Platform, ScrollView, StyleSheet, useWindowDimensions, View, type PointerEvent } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -62,6 +63,7 @@ function Dot({ index, offset, width, reducedMotion, active }: {
 }
 
 export function HeroBanner({ items }: { items: TrendingCard[] }) {
+  const blockTabSwipe = useBlockTabSwipe();
   const titles = items.slice(0, 5);
   const { width } = useWindowDimensions();
   const height = useHeroHeight();
@@ -149,7 +151,7 @@ export function HeroBanner({ items }: { items: TrendingCard[] }) {
   };
   return <View style={{ height, backgroundColor: colors.surface, overflow: 'hidden' }}
     onPointerDown={() => setTouched(true)} onPointerUp={release} onPointerCancel={release}
-    onTouchStart={() => setTouched(true)} onTouchEnd={release} onTouchCancel={release}>
+    onTouchStart={() => { blockTabSwipe(); setTouched(true); }} onTouchEnd={release} onTouchCancel={release}>
     <Animated.ScrollView ref={scroll} horizontal pagingEnabled={Platform.OS !== 'web' || !touched} showsHorizontalScrollIndicator={false}
       testID="hero-carousel" scrollEventThrottle={16} onScroll={onScroll}
       accessibilityLabel={t('featuredCarousel')} accessibilityRole="adjustable"

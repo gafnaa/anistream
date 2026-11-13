@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { SwipeTabScreen } from '@/components/SwipeTabScreen';
 import Icon from '@/components/Icon';
 import { useState, createRef, type ComponentRef } from 'react';
 import { View } from 'react-native';
@@ -19,7 +20,9 @@ export default function TabLayout() {
   return <TabBlurTarget.Provider value={targets}><Tabs tabBar={props => <GlassTabBar {...props} />}
     screenLayout={({ children, route }) => {
       const target = targets[route.name];
-      return <BlurTargetView ref={target} style={{ flex: 1 }}>{children}</BlurTargetView>;
+      return <SwipeTabScreen index={tabs.findIndex(tab => tab.name === route.name)}>
+        <BlurTargetView ref={target} style={{ flex: 1 }}>{children}</BlurTargetView>
+      </SwipeTabScreen>;
     }}
     screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colors.bg } }}>
     {tabs.map(tab => <Tabs.Screen key={tab.name} name={tab.name} options={{ title: t(tab.label),
