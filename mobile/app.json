@@ -2,7 +2,7 @@
   "expo": {
     "name": "AniStream",
     "slug": "anistream",
-    "version": "0.7.0",
+    "version": "0.7.1",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "anistream",
@@ -51,6 +51,7 @@
               "arm64-v8a"
             ],
             "enableMinifyInReleaseBuilds": true,
+        "extraProguardRules": "-keep class * extends androidx.room.RoomDatabase { <init>(); }\n-keep class androidx.work.impl.WorkDatabase_Impl { *; }",
             "enableShrinkResourcesInReleaseBuilds": true,
             "useLegacyPackaging": true
           }
