@@ -73,7 +73,8 @@
       [
         "expo-notifications",
         {
-          "color": "#E85D3F",
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#E11D48",
           "defaultChannel": "new-episodes"
         }
       ]
