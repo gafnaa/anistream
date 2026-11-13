@@ -1,3 +1,4 @@
+import { setEpisodeNotifications, testEpisodeNotification } from '@/notifications/service';
 import { Languages, Database, Info } from 'lucide-react-native';
 import { colors } from '@/theme';
 import { useState } from 'react';
@@ -21,6 +22,10 @@ export default function SettingsScreen() {
     <SettingsRow label={t('resumeSetting')} hint={t('resumeHint')}><Switch accessibilityLabel={t('resumeSetting')} value={settings.resume} onValueChange={resume => save({ resume })} /></SettingsRow>
     {Platform.OS !== 'web' && <SettingsRow label={t('wifiOnly')} hint={t('wifiWaiting')}><Switch accessibilityLabel={t('wifiOnly')} value={settings.wifiOnly} onValueChange={wifiOnly => save({ wifiOnly })} /></SettingsRow>}
     <SettingsDivider /><Text variant="h2">{t('preferences')}</Text>
+    {Platform.OS !== 'web' && <>
+      <SettingsRow label={t('episodeNotifications')} hint={t('episodeNotificationHint')}><Switch accessibilityLabel={t('episodeNotifications')} value={settings.episodeNotifications} onValueChange={enabled => { void setEpisodeNotifications(enabled).catch(() => setError(true)); }} /></SettingsRow>
+      <SettingsRow label={t('notificationTest')} onPress={() => { void testEpisodeNotification().catch(() => setError(true)); }} />
+    </>}
     <SettingsRow icon={<Languages size={24} color={colors['text-muted']} />} label={t('language')} hint={settings.language === 'system' ? t('systemLanguage') : settings.language === 'id' ? 'Indonesia' : 'English'} onPress={() => router.push('/settings/language')} />
     <SettingsRow icon={<Database size={24} color={colors['text-muted']} />} label={t('storage')} onPress={() => router.push('/settings/storage')} />
     <SettingsRow icon={<Info size={24} color={colors['text-muted']} />} label={t('about')} onPress={() => router.push('/settings/about')} />

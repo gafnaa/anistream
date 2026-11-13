@@ -2,6 +2,12 @@ import { getSettings } from '@/storage/settings';
 import { getLocales } from 'expo-localization';
 
 const en = {
+  episodeNotifications: 'New episode notifications', episodeChannel: 'New episodes',
+  episodeNotificationHint: 'Checked periodically. Xiaomi, Oppo and Vivo phones may need background activity allowed in system settings.',
+  notificationDenied: 'Notifications are blocked. Allow them in system settings to receive episode alerts.',
+  openSystemSettings: 'Open system settings', notificationTest: 'Test notification', notificationTestBody: 'Episode notifications are ready.',
+  episodeReleased: 'Episode {number} is out', episodeSummaryTitle: 'New episodes', episodeSummaryBody: '{count} series in My List have new episodes.',
+
   updateAvailable: 'Update available', updateNow: 'Update', updateLater: 'Later',
   updateChecking: 'Checking for updates…', updateLatest: 'You are using the latest version',
   updateDownloading: 'Downloading', updateError: 'Could not download or open the installer. Try again or download in your browser.',
@@ -211,6 +217,12 @@ const en = {
 } as const;
 type Dictionary = { [K in keyof typeof en]: string };
 const id: Dictionary = {
+  episodeNotifications: 'Notifikasi episode baru', episodeChannel: 'Episode baru',
+  episodeNotificationHint: 'Diperiksa berkala. HP Xiaomi, Oppo, dan Vivo mungkin perlu izin aktivitas latar belakang di pengaturan sistem.',
+  notificationDenied: 'Notifikasi diblokir. Izinkan di pengaturan sistem untuk menerima kabar episode baru.',
+  openSystemSettings: 'Buka pengaturan sistem', notificationTest: 'Uji notifikasi', notificationTestBody: 'Notifikasi episode siap digunakan.',
+  episodeReleased: 'Episode {number} sudah rilis', episodeSummaryTitle: 'Episode baru', episodeSummaryBody: '{count} seri di Daftar Saya punya episode baru.',
+
   updateAvailable: 'Pembaruan tersedia', updateNow: 'Perbarui', updateLater: 'Nanti',
   updateChecking: 'Memeriksa pembaruan…', updateLatest: 'Kamu sudah memakai versi terbaru',
   updateDownloading: 'Mengunduh', updateError: 'Gagal mengunduh atau membuka pemasang. Coba lagi atau unduh melalui browser.',

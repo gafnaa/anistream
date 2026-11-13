@@ -21,6 +21,7 @@ function createStore<T>(key: string, validate: (value: unknown) => value is T) {
     listeners.forEach(listener => listener());
   });
   return {
+    read: async () => { await ready; await pending; return items; },
     useHydrated: () => useSyncExternalStore(listener => {
       listeners.add(listener);
       return () => { listeners.delete(listener); };
@@ -65,6 +66,7 @@ export function saveSearch(query: string) {
 }
 export function removeSearch(query: string) { return searches.update(current => current.filter(item => item !== query)); }
 export function clearSearches() { return searches.update(() => []); }
+export const readBookmarks = bookmarks.read;
 export const useBookmarks = bookmarks.useItems;
 export const useBookmarksHydrated = bookmarks.useHydrated;
 export function clearHistory() { return history.update(() => []); }
@@ -73,10 +75,14 @@ export const useHistoryHydrated = history.useHydrated;
 export function useIsBookmarked(slug: string) {
   return useBookmarks().some(item => item.slug === slug);
 }
-export function toggleBookmark(item: Omit<Bookmark, 'addedAt'>) {
-  return bookmarks.update(current => current.some(value => value.slug === item.slug)
-    ? current.filter(value => value.slug !== item.slug)
-    : [{ ...item, addedAt: Date.now() }, ...current].slice(0, 100));
+export async function toggleBookmark(item: Omit<Bookmark, 'addedAt'>) {
+  let added = false;
+  await bookmarks.update(current => {
+    added = !current.some(value => value.slug === item.slug);
+    return added ? [{ ...item, addedAt: Date.now() }, ...current].slice(0, 100)
+      : current.filter(value => value.slug !== item.slug);
+  });
+  void import('../notifications/service').then(module => module.bookmarksChanged(added)).catch(() => undefined);
 }
 export function removeHistory(slug: string) {
   return history.update(current => current.filter(item => item.episodeSlug !== slug));

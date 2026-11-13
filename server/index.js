@@ -1,3 +1,4 @@
+import { parseUpdateSlugs, seriesUpdates, validSeriesSlug } from './updates.js';
 import { MN_VIDEO_HOST } from './mirainime.js';
 import { validAccessKey } from './access.js';
 import { isCoverUrl, coverFile, coverResponse } from './artwork.js';
@@ -76,7 +77,7 @@ const cache = new Map();
 const TTL = {
   home: 60_000,
   list: 60_000,
-  series: 120_000,
+  series: 600_000,
   episode: 120_000,
   stream: 300_000,
   genres: 86_400_000,
@@ -204,12 +205,24 @@ app.get('/api/thumb/:slug', wrap(async (req, res) => {
   }
 }));
 
-app.get('/api/series/:slug', wrap(async (req, res) => {
-  res.json(await cached(`series:${req.params.slug}`, TTL.series, async () => {
-    const series = await getSeries(req.params.slug);
+function cachedSeries(slug) {
+  return cached(`series:${slug}`, TTL.series, async () => {
+    const series = await getSeries(slug);
     await enrichCovers([series]);
     return series;
-  }));
+  });
+}
+
+app.get('/api/updates', wrap(async (req, res) => {
+  let slugs;
+  try { slugs = parseUpdateSlugs(req.query.slugs); }
+  catch (error) { return res.status(400).json({ error: error.message }); }
+  res.json(await seriesUpdates(slugs, cachedSeries));
+}));
+
+app.get('/api/series/:slug', wrap(async (req, res) => {
+  if (!validSeriesSlug(req.params.slug)) return res.status(400).json({ error: 'Invalid slug' });
+  res.json(await cachedSeries(req.params.slug));
 }));
 
 app.get('/api/episode/:slug', wrap(async (req, res) => {
