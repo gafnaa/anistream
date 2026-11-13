@@ -1,3 +1,4 @@
+import { NotificationObserver } from '@/notifications/NotificationObserver';
 import '../../global.css';
 import { UpdateProvider } from '@/update/UpdateProvider';
 import { startDownloadEngine } from '@/downloads/engine';
@@ -76,6 +77,7 @@ export default function RootLayout() {
         <Stack.Screen name="dev/design" options={{ headerShown: true, title: t('design'), headerBackTitle: t('back') }} />
       </Stack.Protected>
     </Stack>}
+    <NotificationObserver />
     <Connectivity />
     <PortalHost />
     </UpdateProvider>

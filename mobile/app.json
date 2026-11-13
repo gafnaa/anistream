@@ -2,7 +2,7 @@
   "expo": {
     "name": "AniStream",
     "slug": "anistream",
-    "version": "0.6.3",
+    "version": "0.7.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "anistream",
@@ -15,7 +15,8 @@
     },
     "android": {
       "permissions": [
-        "android.permission.REQUEST_INSTALL_PACKAGES"
+        "android.permission.REQUEST_INSTALL_PACKAGES",
+        "android.permission.POST_NOTIFICATIONS"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#000000",
@@ -67,7 +68,16 @@
           "initialOrientation": "PORTRAIT_UP"
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-background-task",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#E11D48",
+          "defaultChannel": "new-episodes"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
