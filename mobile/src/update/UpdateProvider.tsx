@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppLatest } from '@/api';
 import { API_URL, withApiKey } from '@/api/client';
 import type { AppRelease } from '@/api/types';
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/Text';
 import { colors } from '@/theme';
@@ -99,8 +99,10 @@ export function UpdateProvider({ ready, children }: { ready: boolean; children: 
         {storageError && <Text accessibilityRole="alert">{t('storageError')}</Text>}
         {error && <View style={{ gap: 12 }}><Text accessibilityRole="alert">{t('updateError')}</Text>
           <Button variant="outline" onPress={() => { void openBrowser(); }}><Text>{t('updateBrowser')}</Text></Button></View>}
-        <Button disabled={progress !== null} onPress={() => { void install(); }}><Text style={{ color: '#FFFFFF' }}>{t('updateNow')}</Text></Button>
-        <Button variant="ghost" disabled={progress !== null} onPress={() => { void dismiss(); }}><Text>{t('updateLater')}</Text></Button>
+        <AlertDialogFooter>
+          <Button variant="ghost" style={{ flex: 1, minWidth: 0, height: 'auto', minHeight: 48, paddingVertical: 12 }} disabled={progress !== null} onPress={() => { void dismiss(); }}><Text className="text-center whitespace-normal" style={{ flexShrink: 1 }}>{t('updateLater')}</Text></Button>
+          <Button style={{ flex: 1, minWidth: 0, height: 'auto', minHeight: 48, paddingVertical: 12 }} disabled={progress !== null} onPress={() => { void install(); }}><Text className="text-center whitespace-normal" style={{ color: '#FFFFFF', flexShrink: 1 }}>{t('updateNow')}</Text></Button>
+        </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   </UpdateContext.Provider>;
