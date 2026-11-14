@@ -92,9 +92,11 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
     return descending ? items.reverse() : items;
   }, [episodes, selectedRange, hasRanges, descending]);
   const target = lastWatched?.episodeSlug ?? episodes[0]?.slug;
+  // A film is stored as a single episode, so its labels drop the episode number and count.
+  const isMovie = series.slug.startsWith('tm~movie~');
   const playLabel = lastWatched
-    ? `▶ ${t('resumeEpisode')} E${lastWatched.episode} (${timestamp(lastWatched.position)})`
-    : `▶ ${t('play')} E${episodes[0]?.number ?? 1}`;
+    ? `▶ ${t('resumeEpisode')}${isMovie ? '' : ` E${lastWatched.episode}`} (${timestamp(lastWatched.position)})`
+    : `▶ ${t('play')}${isMovie ? '' : ` E${episodes[0]?.number ?? 1}`}`;
   const toggle = () => {
     haptic();
     setStorageError(false);
@@ -102,7 +104,7 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
       .then(() => setConfirmRemoval(false)).catch(() => setStorageError(true));
   };
   const meta = [series.released || series.season, series.type, series.status,
-    `${episodes.length} ${t('episodesLabel')}`].filter(Boolean).join(' · ');
+    !isMovie && `${episodes.length} ${t('episodesLabel')}`].filter(Boolean).join(' · ');
   return <View style={styles.screen}><AmbientBackground />
     <FlatList onScroll={event => setScrolled(event.nativeEvent.contentOffset.y > 24)} scrollEventThrottle={32} data={visible} keyExtractor={item => item.slug}
       initialNumToRender={10} maxToRenderPerBatch={10} windowSize={5}
