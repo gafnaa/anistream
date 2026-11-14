@@ -22,7 +22,7 @@ export function EpisodeRow({ episode, seriesSlug, seriesTitle, current = false, 
     style={{ flex: 1, height: 'auto', minHeight: 88, paddingVertical: 8, paddingHorizontal: 0, borderRadius: 10, backgroundColor: current ? colors.card : 'transparent' }}>
     <View style={{ flex: 1, gap: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <EpisodeThumbnail slug={episode.slug} image={image} />
+        <EpisodeThumbnail slug={episode.slug} image={episode.thumbnail ?? image} />
         <View style={{ flex: 1, gap: 4 }}>
           <Text variant="title" muted={watched}>{t('episodeLabel')} {episode.number}</Text><Text variant="caption" muted numberOfLines={2}>{title}</Text>
           {!!episode.date && <Text variant="caption" muted>{episode.date}</Text>}

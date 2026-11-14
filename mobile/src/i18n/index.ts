@@ -2,6 +2,8 @@ import { getSettings } from '@/storage/settings';
 import { getLocales } from 'expo-localization';
 
 const en = {
+  moviesAndTv: 'Movies & TV', films: 'Movies', tvSeries: 'Series', moviePopular: 'Popular', movieTop: 'Top rated', movieNow: 'Now playing / On air',
+  subtitles: 'Subtitles', subtitlesOff: 'Off', audioTracks: 'Audio',
   episodeNotifications: 'New episode notifications', episodeChannel: 'New episodes',
   episodeNotificationHint: 'Checked periodically. Xiaomi, Oppo and Vivo phones may need background activity allowed in system settings.',
   notificationDenied: 'Notifications are blocked. Allow them in system settings to receive episode alerts.',
@@ -217,6 +219,8 @@ const en = {
 } as const;
 type Dictionary = { [K in keyof typeof en]: string };
 const id: Dictionary = {
+  moviesAndTv: 'Film & Series', films: 'Film', tvSeries: 'Series', moviePopular: 'Populer', movieTop: 'Rating tertinggi', movieNow: 'Sedang tayang',
+  subtitles: 'Subtitle', subtitlesOff: 'Nonaktif', audioTracks: 'Audio',
   episodeNotifications: 'Notifikasi episode baru', episodeChannel: 'Episode baru',
   episodeNotificationHint: 'Diperiksa berkala. HP Xiaomi, Oppo, dan Vivo mungkin perlu izin aktivitas latar belakang di pengaturan sistem.',
   notificationDenied: 'Notifikasi diblokir. Izinkan di pengaturan sistem untuk menerima kabar episode baru.',

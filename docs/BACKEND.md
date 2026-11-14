@@ -201,3 +201,48 @@ original image bytes on disk, so devices need no direct AniList CDN connection.
 Only HTTPS files in AniList's anime cover directory are accepted; redirects and
 other hosts are rejected. Cached metadata is copied for each response so one
 caller's host or key never enters another caller's cached response.
+
+## Movies and TV
+
+TMDB v3 supplies movie/TV catalogue metadata using the server-only `TMDB_TOKEN`
+Bearer token. Lists/search/genres cache for one hour and details/seasons for six
+hours. Overviews use `id-ID`, with `en-US` fallback when empty. Series slugs are
+`tm~movie~<id>` and `tm~tv~<id>`; episode slugs append `~1` for movies or
+`~<season>~<episode>` for TV. TV lists include aired episodes from every season
+except specials (season zero). Episode numbers are sequential across seasons so
+history ordering and numeric new-episode notifications work across season changes;
+titles retain the actual `S1 E3` numbering. Episode `thumbnail` uses TMDB stills.
+
+- `/api/movies?type=movie|tv&list=trending|popular|top|now|genre&genre=<id>&page=<n>`
+  returns the existing paginated catalogue shape. `now` selects now playing movies
+  or on-the-air TV.
+- `/api/movies/genres?type=movie|tv` returns genre IDs and localized names.
+- `/api/home` preserves anime arrays and appends `movieRows` (Film Trending,
+  Series Trending, Film Populer). `/api/search` appends TMDB movie and TV results
+  with `type: Film|Series`; TMDB failures do not discard working anime results.
+- Existing `/api/series`, `/api/episode`, `/api/updates` and `/api/resolve` accept
+  the new namespace. Resolving the episode's Vidbolt mirror produces a keyed
+  `/api/tm/<episode-slug>.m3u8` play URL. Vidbolt requests always use `hevc=0`,
+  a browser User-Agent and Vidbolt Referer, retrying once with the prior server
+  excluded on missing/failed sources. Resolve results cache for 20 minutes.
+- The master and all child media use `/api/hls`. In addition to the original
+  observed CDNs, live verification found `proxy.vidbolt.xyz` playlists and
+  `vercetti.org` segments; these hosts are explicitly allowed.
+- Indonesian subtitles come from TheSubtitleDB's movie or specific TV episode
+  endpoint. Lookup paginates and prefers SRT over VTT; unusable releases are
+  skipped. SRT converts to WebVTT with `X-TIMESTAMP-MAP`.
+  `/api/sub/<episode-slug>.m3u8` serves a single-segment VOD subtitle playlist,
+  and `.vtt` serves the cues. The master adds Indonesia to `subs`, retains English
+  tracks with `DEFAULT=NO`, and points every variant at the subtitle group. If no
+  usable Indonesian file exists, the upstream master keeps its original tracks.
+  All generated playback/subtitle URLs carry the caller's access key.
+
+Mobile Discover links to Film & Series, with movie/TV, list and genre controls
+using the existing poster grid. Home appends the movie rows after anime rows.
+The native player offers subtitle/audio track selection and selects Indonesia
+when available. `tm~` episodes hide MP4-only downloads and use TMDB stills rather
+than scheduling frame generation. History and My List keep their existing shapes.
+
+If media fails after a successful resolve, the episode also exposes a Vidbolt
+alternate mirror. The existing player automatically advances to it; it excludes
+that episode's cached first server and keeps a separate twenty-minute cache.

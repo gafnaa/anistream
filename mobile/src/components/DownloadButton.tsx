@@ -14,6 +14,7 @@ import { Button } from './ui/button';
 import { Switch } from './ui/switch';
 export type DownloadMetadata = { slug: string; seriesSlug: string; seriesTitle: string; episode: string; poster: string };
 export function DownloadButton({ metadata }: { metadata: DownloadMetadata }) {
+  if (metadata.slug.startsWith('tm~')) return null;
   if (Platform.OS === 'web') return null;
   return <NativeDownloadButton metadata={metadata} />;
 }

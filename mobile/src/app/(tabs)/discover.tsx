@@ -25,6 +25,7 @@ export default function Discover() {
   const skeleton = useDelayedSkeleton(genres.isPending);
   if (offline && !genres.data) return <Screen title={t('discover')} preview={false}><OfflineState retry={() => { void genres.refetch(); }} /></Screen>;
   return <Screen title={t('discover')} titleVariant="h1" preview={false}>
+    <Button variant="secondary" onPress={() => router.push('/movies')}><Text variant="title">{t('moviesAndTv')}</Text></Button>
     <Button variant="secondary" accessibilityLabel={t('searchHint')} onPress={() => router.push('/search')}
       style={{ justifyContent: 'flex-start', gap: 12, height: 48, borderRadius: 6, borderWidth: 1, borderColor: colors.line }}>
       <Icon name="search-outline" size={24} color={colors['text-muted']} />
