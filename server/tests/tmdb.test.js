@@ -112,3 +112,8 @@ test('playback fallback excludes the cached first server and caches resolves for
     assert.equal(calls[1].searchParams.get('exclude'), 'first');
   } finally { globalThis.fetch = original; configureTmCache((_key, _ttl, fn) => fn()); }
 });
+test('decoy tiles variant is removed from orion masters', async () => {
+  const { dropDecoyVariants } = await import('../tmdb.js');
+  const master = '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080\ntiles.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=2000000,RESOLUTION=1280x720\nvideo_720p.m3u8';
+  assert.equal(dropDecoyVariants(master), '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=2000000,RESOLUTION=1280x720\nvideo_720p.m3u8');
+});
