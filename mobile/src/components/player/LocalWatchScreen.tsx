@@ -19,6 +19,7 @@ export function LocalWatchScreen({ item }: { item: DownloadRecord }) {
   const settings = useSettings(); const history = useHistory(); const hydrated = useHistoryHydrated();
   const saved = history.find(record => record.episodeSlug === item.slug);
   const [error, setError] = useState(false); const [saveError, setSaveError] = useState(false); const [attempt, setAttempt] = useState(0);
+  const [skippedIntervals] = useState(() => new Set<string>());
   const insets = useSafeAreaInsets(); const { width, height } = useWindowDimensions(); const [expanded, setExpanded] = useState(false);
   const full = expanded || width > height;
   const fail = useCallback(() => setError(true), []);
@@ -33,7 +34,7 @@ export function LocalWatchScreen({ item }: { item: DownloadRecord }) {
     {!full && <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12, gap: 12 }}><PlayerButton icon="arrow-back" label={t('back')} onPress={goBack} /><Text variant="title" style={{ flex: 1 }}>{item.seriesTitle}</Text></View>}
     <View style={{ width, height: full ? height : width * 9 / 16, backgroundColor: '#000' }}>
       {error ? <View style={{ flex: 1, padding: 24, gap: 16, justifyContent: 'center', alignItems: 'center' }}><Text>{t('playbackError')}</Text><Button onPress={() => { setAttempt(value => value + 1); setError(false); }}><Text>{t('retry')}</Text></Button><Button variant="secondary" onPress={goBack}><Text>{t('back')}</Text></Button></View> : hydrated && <NativePlayer key={attempt} url={item.fileUri} type="mp4" resume={settings.resume ? saved?.position ?? 0 : 0} onSave={save} onError={fail} seriesTitle={item.seriesTitle} episodeNumber={Number(item.episode) || undefined}
-        fullscreen={full} onToggleFullscreen={() => setExpanded(!full)}>
+        skippedIntervals={skippedIntervals} fullscreen={full} onToggleFullscreen={() => setExpanded(!full)}>
         <View style={{ position: 'absolute', left: Math.max(12, insets.left), right: Math.max(12, insets.right), top: Math.max(8, insets.top), flexDirection: 'row', justifyContent: 'space-between' }}>
           {full ? <PlayerButton icon="arrow-back" label={t('back')} onPress={goBack} /> : <View />}
         </View>

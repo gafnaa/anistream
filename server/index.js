@@ -1,4 +1,4 @@
-import { configureTmCache, listTm, genresTm, searchTm, getTmSeries, getTmEpisode, resolveTm, getTmSubtitle, injectTmSubtitle, TM_VIDEO_HOST } from './tmdb.js';
+import { configureTmCache, listTm, genresTm, searchTm, getTmSeries, getTmEpisode, resolveTm, getTmSubtitle, injectTmSubtitle, TM_VIDEO_HOST, recommendationsTm } from './tmdb.js';
 import { parseUpdateSlugs, seriesUpdates, validSeriesSlug } from './updates.js';
 import { MN_VIDEO_HOST } from './mirainime.js';
 import { validAccessKey } from './access.js';
@@ -164,6 +164,9 @@ app.get('/api/movies', wrap(async (req, res) => {
 }));
 app.get('/api/movies/genres', wrap(async (req, res) => {
   res.json(await genresTm(req.query.type || 'movie'));
+}));
+app.get('/api/movies/:slug/recommendations', wrap(async (req, res) => {
+  res.json(await recommendationsTm(req.params.slug));
 }));
 
 app.get('/api/latest', wrap(async (req, res) => {

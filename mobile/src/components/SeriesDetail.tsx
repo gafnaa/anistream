@@ -24,6 +24,7 @@ import { SkeletonBox, SkeletonText, SkeletonMotionControl } from './skeleton';
 import { useBrowse } from '@/api';
 import { Row } from './Row';
 import { PosterCard } from './PosterCard';
+import { MovieRecommendations } from './MovieRecommendations';
 import { Button } from './ui/button';
 
 let sessionDescending = false;
@@ -165,7 +166,7 @@ export function SeriesDetail({ series }: { series: SeriesResponse }) {
           </ScrollView>}
         </View>
       </View>}
-      ListFooterComponent={genre ? <View style={{ paddingBottom: 24 }}><Row title={t('moreLikeThis')}
+      ListFooterComponent={series.slug.startsWith('tm~movie~') ? <View style={{ paddingBottom: 24 }}><MovieRecommendations slug={series.slug} /></View> : genre ? <View style={{ paddingBottom: 24 }}><Row title={t('moreLikeThis')}
           items={related.data?.pages.flatMap(page => page.items).filter(item => item.slug !== series.slug) ?? []}
           loading={related.isPending} error={related.isError} retry={() => void related.refetch()}
           itemKey={item => item.slug} renderItem={item => <PosterCard item={item} />} /></View> : undefined}

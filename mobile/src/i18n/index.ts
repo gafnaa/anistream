@@ -132,7 +132,9 @@ const en = {
   removeSearch: "Remove search",
   moreLikeThis: "More like this",
 
-  skipIntro: 'Skip intro', skipEnding: 'Skip ending', skipRecap: 'Skip recap', skipForward85: '+85 sec',
+  skipIntro: 'Skip intro', skipEnding: 'Skip ending', skipRecap: 'Skip recap',
+  recommended: 'Recommended', autoSkip: 'Auto-skip intro & ending', autoSkipHint: 'Automatically skip intros, endings and recaps when timing is available.',
+  introSkipped: 'Intro skipped', endingSkipped: 'Ending skipped', recapSkipped: 'Recap skipped',
   toggleControls: 'Show playback controls',
   servers: 'Servers',
   chooseServer: 'Choose a server',
@@ -349,7 +351,9 @@ const id: Dictionary = {
   removeSearch: "Hapus pencarian",
   moreLikeThis: "Tontonan serupa",
 
-  skipIntro: 'Lewati intro', skipEnding: 'Lewati ending', skipRecap: 'Lewati rekap', skipForward85: '+85 dtk',
+  skipIntro: 'Lewati intro', skipEnding: 'Lewati ending', skipRecap: 'Lewati rekap',
+  recommended: 'Rekomendasi', autoSkip: 'Lewati intro & ending otomatis', autoSkipHint: 'Lewati intro, ending dan rekap otomatis jika waktu tersedia.',
+  introSkipped: 'Intro dilewati', endingSkipped: 'Ending dilewati', recapSkipped: 'Rekap dilewati',
   toggleControls: 'Tampilkan kontrol pemutaran',
   servers: 'Server',
   chooseServer: 'Pilih server',

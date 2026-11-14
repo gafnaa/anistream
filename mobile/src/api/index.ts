@@ -18,6 +18,10 @@ export function useMovieGenres(type: 'movie' | 'tv') {
   return useQuery({ queryKey: ['movie-genres', type], staleTime: 3600_000,
     queryFn: ({ signal }) => apiGet<Genre[]>('/api/movies/genres', { type }, signal) });
 }
+export function useMovieRecommendations(slug: string) {
+  return useQuery({ queryKey: ['movie-recommendations', slug], enabled: /^tm~movie~\d+$/.test(slug), staleTime: 6 * 3600_000,
+    queryFn: ({ signal }) => apiGet<{ items: PageResponse['items'] }>(`/api/movies/${encodeURIComponent(slug)}/recommendations`, {}, signal) });
+}
 export function useAppLatest(enabled = false) {
   return useQuery({ queryKey: ['app-latest'], enabled, retry: false, staleTime: 600_000,
     queryFn: ({ signal }) => apiGet<import('./types').AppRelease>('/api/app/latest', {}, signal) });
