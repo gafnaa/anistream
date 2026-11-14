@@ -110,18 +110,24 @@ export function resolveTm(slug, alternate = false) {
     throw lastError;
   });
 }
+// Child URIs inherit the master's query: some CDNs sign every request with api_key=….
+function childUrl(uri, base) {
+  const url = new URL(uri, base);
+  if (base.search && !url.search && url.host === base.host) url.search = base.search;
+  return url;
+}
 const playlistUris = text => text.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'));
 async function firstSegmentLoads(masterUrl, master) {
   let playlistUrl = masterUrl, playlist = master;
   if (master.includes('#EXT-X-STREAM-INF')) {
     const variant = playlistUris(master)[0];
     if (!variant) return false;
-    playlistUrl = new URL(variant, masterUrl);
+    playlistUrl = childUrl(variant, masterUrl);
     playlist = await (await request(playlistUrl)).text();
   }
   const segment = playlistUris(playlist)[0];
   if (!segment) return false;
-  const response = await fetch(new URL(segment, playlistUrl), { headers: { 'User-Agent': UA, Range: 'bytes=0-1023' }, signal: AbortSignal.timeout(15000) });
+  const response = await fetch(childUrl(segment, playlistUrl), { headers: { 'User-Agent': UA, Range: 'bytes=0-1023' }, signal: AbortSignal.timeout(15000) });
   await response.body?.cancel().catch(() => {});
   return response.ok;
 }

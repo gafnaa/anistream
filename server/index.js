@@ -314,7 +314,12 @@ function assertAllowed(target) {
 function rewriteManifest(body, baseUrl, suffix = '') {
   const base = new URL(baseUrl);
   const proxy = (abs) => `/api/hls?url=${encodeURIComponent(abs)}${suffix}`;
-  const abs = (uri) => new URL(uri, base).toString();
+  const abs = (uri) => {
+    const url = new URL(uri, base);
+    // Movie/TV CDNs authorise every child playlist and segment with the master's query (api_key=…).
+    if (TM_VIDEO_HOST.test(base.hostname) && base.search && !url.search && url.host === base.host) url.search = base.search;
+    return url.toString();
+  };
 
   return body
     .split('\n')
