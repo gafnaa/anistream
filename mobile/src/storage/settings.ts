@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 
-export type Settings = { language: 'id' | 'en' | 'system'; autoplayNext: boolean; resume: boolean; onboarded: boolean; wifiOnly: boolean; profileId?: string; episodeNotifications: boolean; notificationPermissionAsked: boolean };
-const defaults: Settings = { language: 'system', autoplayNext: true, resume: true, onboarded: false, wifiOnly: true, episodeNotifications: true, notificationPermissionAsked: false };
+export type Settings = { language: 'id' | 'en' | 'system'; autoSkip: boolean; autoplayNext: boolean; resume: boolean; onboarded: boolean; wifiOnly: boolean; profileId?: string; episodeNotifications: boolean; notificationPermissionAsked: boolean };
+const defaults: Settings = { language: 'system', autoSkip: true, autoplayNext: true, resume: true, onboarded: false, wifiOnly: true, episodeNotifications: true, notificationPermissionAsked: false };
 let settings = defaults;
 let hydrated = false;
 const listeners = new Set<() => void>();
@@ -14,6 +14,7 @@ export const settingsReady = AsyncStorage.getItem('anistream.settings.v1').then(
     : `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   settings = { profileId, episodeNotifications: value?.episodeNotifications !== false, notificationPermissionAsked: value?.notificationPermissionAsked === true, language: ['id', 'en', 'system'].includes(value?.language) ? value.language : 'system',
     autoplayNext: typeof value?.autoplayNext === 'boolean' ? value.autoplayNext : true,
+    autoSkip: typeof value?.autoSkip === 'boolean' ? value.autoSkip : true,
     resume: typeof value?.resume === 'boolean' ? value.resume : true, onboarded: value?.onboarded === true, wifiOnly: value?.wifiOnly !== false };
   if (value?.profileId !== profileId) return AsyncStorage.setItem('anistream.settings.v1', JSON.stringify(settings));
 }).catch(() => { settings = { ...settings, profileId: undefined }; }).finally(() => { hydrated = true; emit(); });

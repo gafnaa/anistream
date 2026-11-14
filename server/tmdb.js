@@ -31,9 +31,9 @@ const image = (path, size = 'w500') => path ? `https://image.tmdb.org/t/p/${size
 const card = (entry, type) => ({ slug: `tm~${type}~${entry.id}`, title: entry.title || entry.name,
   image: image(entry.poster_path), type: type === 'movie' ? 'Film' : 'Series', status: null,
   episode: null, episodeTitle: null, kind: 'series', url: `https://www.themoviedb.org/${type}/${entry.id}` });
-async function englishTitles(route, params, results) {
+async function englishTitles(route, params, results, detail = false) {
   if (!results.some(untranslated)) return results;
-  const english = new Map((await tm(route, { ...params, language: 'en-US' })).results.map(entry => [entry.id, entry]));
+  const english = new Map((await tm(route, { ...params, language: 'en-US' }, detail)).results.map(entry => [entry.id, entry]));
   return results.map(entry => untranslated(entry) && english.has(entry.id)
     ? { ...entry, title: english.get(entry.id).title, name: english.get(entry.id).name } : entry);
 }
@@ -50,6 +50,25 @@ export async function listTm({ type = 'movie', list = 'trending', genre = '', pa
 export async function genresTm(type = 'movie') {
   if (!['movie', 'tv'].includes(type)) throw new Error('Invalid media type');
   return (await tm(`genre/${type}/list`)).genres.map(genre => ({ slug: String(genre.id), name: genre.name }));
+}
+export function recommendationsTm(slug) {
+  const { type, id } = parseTmSlug(slug);
+  if (type !== 'movie') throw new Error('Recommendations require a movie');
+  return cached(`tm-recommendations:${slug}`, 6 * 3600_000, async () => {
+    const source = await tm(`movie/${id}`, {}, true);
+    const genres = new Set(source.genres.map(genre => genre.id));
+    if (!genres.size) return { items: [] };
+    const pages = await Promise.all([1, 2].map(async page => {
+      const params = { with_genres: [...genres].join('|'), sort_by: 'vote_average.desc', 'vote_count.gte': '300', include_adult: 'false', page: String(page) };
+      const data = await tm('discover/movie', params, true);
+      return englishTitles('discover/movie', params, data.results, true);
+    }));
+    const shared = entry => (entry.genre_ids || []).filter(genre => genres.has(genre)).length;
+    const entries = [...new Map(pages.flat().map(entry => [entry.id, entry])).values()]
+      .filter(entry => String(entry.id) !== id && shared(entry) > 0 && entry.vote_count >= 300)
+      .sort((a, b) => shared(b) - shared(a) || b.vote_average - a.vote_average || a.id - b.id);
+    return { items: entries.slice(0, 12).map(entry => card(entry, 'movie')) };
+  });
 }
 export async function searchTm(query, page = 1) {
   if (!query) return { items: [], page, hasNext: false };

@@ -18,6 +18,7 @@ export default function SettingsScreen() {
   return <SettingsLayout title={t('settings')}>
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><UserAvatar /><Text variant="h2">{t('me')}</Text></View>
     <Text variant="h2">{t('playback')}</Text>
+    <SettingsRow label={t('autoSkip')} hint={t('autoSkipHint')}><Switch accessibilityLabel={t('autoSkip')} value={settings.autoSkip} onValueChange={autoSkip => save({ autoSkip })} /></SettingsRow>
     <SettingsRow label={t('autoplay')} hint={t('autoplayHint')}><Switch accessibilityLabel={t('autoplay')} value={settings.autoplayNext} onValueChange={autoplayNext => save({ autoplayNext })} /></SettingsRow>
     <SettingsRow label={t('resumeSetting')} hint={t('resumeHint')}><Switch accessibilityLabel={t('resumeSetting')} value={settings.resume} onValueChange={resume => save({ resume })} /></SettingsRow>
     {Platform.OS !== 'web' && <SettingsRow label={t('wifiOnly')} hint={t('wifiWaiting')}><Switch accessibilityLabel={t('wifiOnly')} value={settings.wifiOnly} onValueChange={wifiOnly => save({ wifiOnly })} /></SettingsRow>}

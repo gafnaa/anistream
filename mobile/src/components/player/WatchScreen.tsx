@@ -13,6 +13,7 @@ import { useSettings } from '@/storage/settings';
 import { addHistory, useHistory, useHistoryHydrated } from '@/storage';
 import { Text } from '@/components/Text';
 import { EpisodeRow } from '@/components/EpisodeRow';
+import { MovieRecommendations } from '@/components/MovieRecommendations';
 import { Button } from '@/components/ui/button';
 import { Image } from 'expo-image';
 import { Server, Check } from 'lucide-react-native';
@@ -36,6 +37,7 @@ export function WatchScreen(props: { slug: string; previewNext?: boolean }) {
 }
 function OnlineWatchScreen({ slug, previewNext = false }: { slug: string; previewNext?: boolean }) {
   const offline = useOffline();
+  const [skippedIntervals] = useState(() => new Set<string>());
   const settings = useSettings();
   const episode = useEpisode(slug);
   const series = useSeries(episode.data?.seriesSlug ?? '');
@@ -150,7 +152,7 @@ function OnlineWatchScreen({ slug, previewNext = false }: { slug: string; previe
           retry();
         }}><Text>{t('retry')}</Text></Button><Button variant="secondary" onPress={goBack}><Text>{t('back')}</Text></Button></View>
       </View> : source && historyHydrated ? source.type === 'iframe' ? <><EmbedPlayer url={source.url} onError={fail} />{chrome}</> :
-        <NativePlayer key={`${index}-${attempt}`} url={withApiKey(new URL(source.playUrl || source.url, `${API_URL}/`).href)} type={source.type}
+        <NativePlayer key={`${slug}-${index}-${attempt}`} skippedIntervals={skippedIntervals} url={withApiKey(new URL(source.playUrl || source.url, `${API_URL}/`).href)} type={source.type}
           resume={resume} onSave={save} onError={fail} seriesTitle={episode.data?.seriesTitle} episodeNumber={episodeNumber} anime={!slug.startsWith('tm~')}
           onNext={settings.autoplayNext && episode.data?.nextSlug ? next : undefined} previewNext={previewNext}
           fullscreen={full} onToggleFullscreen={toggleFull}>{chrome}</NativePlayer>
@@ -172,9 +174,11 @@ function OnlineWatchScreen({ slug, previewNext = false }: { slug: string; previe
             {episode.data?.nextSlug && <Button variant="outline" onPress={next}><Text variant="caption">{t('nextEpisode')}</Text></Button>}
           </View>
           <View style={{ height: 1, backgroundColor: colors.line, marginVertical: 16 }} />
+          {slug.startsWith('tm~movie~') ? <MovieRecommendations slug={slug.split('~').slice(0, 3).join('~')} /> : <>
           <Text variant="h2">{t('upNext')}</Text>
           {series.isError && <Button variant="secondary" onPress={() => { void series.refetch(); }}><Text>{t('retry')}</Text></Button>}
           {series.isPending && <><SkeletonBox height={80} /><SkeletonBox height={80} /></>}
+          </>}
         </>}
       </View>}
       renderItem={({ item }) => <EpisodeRow episode={item} seriesSlug={episode.data?.seriesSlug ?? ''}

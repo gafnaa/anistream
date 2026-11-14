@@ -1,6 +1,42 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTmSlug, srtToVtt, injectTmSubtitle, TM_VIDEO_HOST, configureTmCache, getTmSeries, resolveTm, getTmSubtitle } from '../tmdb.js';
+import { parseTmSlug, srtToVtt, injectTmSubtitle, TM_VIDEO_HOST, configureTmCache, getTmSeries, resolveTm, getTmSubtitle, recommendationsTm } from '../tmdb.js';
+
+test('movie recommendations rank shared genres before rating, exclude source and duplicates, and translate titles', async () => {
+  const original = globalThis.fetch, token = process.env.TMDB_TOKEN, cache = new Map();
+  process.env.TMDB_TOKEN = 'test';
+  configureTmCache(async (key, ttl, fn) => {
+    assert.equal(ttl, 6 * 3600_000);
+    if (!cache.has(key)) cache.set(key, await fn());
+    return cache.get(key);
+  });
+  const entry = (id, genre_ids, vote_average, extra = {}) => ({ id, genre_ids, vote_average, vote_count: 500, title: `Film ${id}`, original_language: 'en', ...extra });
+  let calls = 0;
+  globalThis.fetch = async url => {
+    calls++;
+    const parsed = new URL(url);
+    if (parsed.pathname.endsWith('/movie/1')) return Response.json({ genres: [{ id: 18 }, { id: 36 }] });
+    assert.equal(parsed.searchParams.get('with_genres'), '18|36');
+    assert.equal(parsed.searchParams.get('vote_count.gte'), '300');
+    assert.equal(parsed.searchParams.get('sort_by'), 'vote_average.desc');
+    const translated = parsed.searchParams.get('language') === 'en-US';
+    return Response.json({ results: parsed.searchParams.get('page') === '1'
+      ? [entry(1, [18, 36], 10), entry(2, [18], 9), entry(3, [18, 36], 8), entry(9, [99], 10), entry(8, [18], 10, { vote_count: 2 })]
+      : [entry(3, [18, 36], 8), entry(4, [18, 36], 8.5, { original_language: 'ja', original_title: '原題', title: translated ? 'English title' : '原題' })] });
+  };
+  try {
+    const result = await recommendationsTm('tm~movie~1');
+    assert.deepEqual(result.items.map(item => item.slug), ['tm~movie~4', 'tm~movie~3', 'tm~movie~2']);
+    assert.equal(result.items[0].title, 'English title');
+    await recommendationsTm('tm~movie~1');
+    assert.equal(calls, 4);
+    assert.throws(() => recommendationsTm('tm~tv~1'));
+  } finally {
+    globalThis.fetch = original;
+    configureTmCache((_key, _ttl, fn) => fn());
+    if (token === undefined) delete process.env.TMDB_TOKEN; else process.env.TMDB_TOKEN = token;
+  }
+});
 
 test('TMDB namespace accepts only complete movie and TV identifiers', () => {
   assert.equal(parseTmSlug('tm~movie~1218925~1', true).seriesSlug, 'tm~movie~1218925');

@@ -10,6 +10,8 @@ import { colors } from '@/theme';
 import { t } from '@/i18n';
 import { PlayerButton } from './PlayerButton';
 import { useSkipTimes } from '@/api';
+import { useSettings } from '@/storage/settings';
+import { autoSkipInterval } from './autoSkip';
 
 const AUTOPLAY_NEXT = true;
 const trackKey = (track: SubtitleTrack | AudioTrack) => track.id ?? `${track.language}:${track.label}:${track.name ?? ''}`;
@@ -25,12 +27,13 @@ function time(value: number) {
   const seconds = Math.max(0, Math.floor(value));
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
-export function NativePlayer({ url, type, resume, onSave, onError, onNext, children, previewNext = false, seriesTitle, episodeNumber, anime = true, fullscreen = false, onToggleFullscreen }: {
+export function NativePlayer({ url, type, resume, onSave, onError, onNext, children, previewNext = false, seriesTitle, episodeNumber, anime = true, fullscreen = false, onToggleFullscreen, skippedIntervals }: {
   url: string; type: 'hls' | 'mp4'; resume: number; onSave: (position: number, duration: number) => void;
   onError: () => void; onNext?: () => void; children: React.ReactNode; previewNext?: boolean;
   seriesTitle?: string | null;
-  /** Anime episodes get AniSkip times and the +85 s opening skip; films and TV do not. */
+  /** AniSkip timing is available for anime episodes. */
   anime?: boolean; episodeNumber?: number; fullscreen?: boolean; onToggleFullscreen?: () => void;
+  skippedIntervals?: Set<string>;
 }) {
   const [initialResume] = useState(resume);
   const scrubberWidth = useRef(1);
@@ -49,8 +52,17 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
   const [duration, setDuration] = useState(0);
   const skipTimes = useSkipTimes(anime ? seriesTitle : undefined, episodeNumber, duration);
   const skipInterval = skipTimes.data?.intervals.find(interval => position >= interval.start && position < interval.end);
-  const fallbackSkip = anime && duration > 0 && position < 300 && !skipTimes.isFetching && !skipTimes.data?.intervals.length;
-  const skipLabel = skipInterval ? t(skipInterval.type === 'op' ? 'skipIntro' : skipInterval.type === 'ed' ? 'skipEnding' : 'skipRecap') : t('skipForward85');
+  const settings = useSettings();
+  const [localSkipped] = useState(() => new Set<string>());
+  const skipped = skippedIntervals ?? localSkipped;
+  const [skipNotice, setSkipNotice] = useState('');
+  const [ended, setEnded] = useState(false);
+  const skipLabel = skipInterval ? t(skipInterval.type === 'op' ? 'skipIntro' : skipInterval.type === 'ed' ? 'skipEnding' : 'skipRecap') : '';
+  useEffect(() => {
+    if (!skipNotice) return;
+    const timer = setTimeout(() => setSkipNotice(''), 2000);
+    return () => clearTimeout(timer);
+  }, [skipNotice]);
   const [visible, setVisible] = useState(true);
   const [ripple, setRipple] = useState(0);
   const [cancelled, setCancelled] = useState(false);
@@ -107,10 +119,12 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
       player.addListener('timeUpdate', event => {
         initialize(player.duration);
         setPosition(event.currentTime);
+        if (event.currentTime < player.duration - 1) setEnded(false);
         if (Math.abs(event.currentTime - lastPosition.current) > 0.1) lastProgress.current = Date.now();
         lastPosition.current = event.currentTime;
       }),
     ];
+    subscriptions.push(player.addListener('playToEnd', () => { setEnded(true); setPosition(player.duration); }));
     player.play();
     let lastSave = Date.now();
     const interval = setInterval(() => {
@@ -131,15 +145,28 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
     };
   }, [player, initialResume, onError]);
   useEffect(() => {
+    const subscription = player.addListener('timeUpdate', event => {
+      if (!settings.autoSkip || !player.playing || duration <= 0) return;
+      const interval = autoSkipInterval(skipTimes.data?.intervals ?? [], event.currentTime, skipped, `${seriesTitle}:${episodeNumber}`);
+      if (!interval) return;
+      const target = Math.min(duration, interval.end);
+      seekTo(player, target);
+      setPosition(target);
+      setEnded(target >= duration);
+      setSkipNotice(t(interval.type === 'op' ? 'introSkipped' : interval.type === 'ed' ? 'endingSkipped' : 'recapSkipped'));
+    });
+    return () => subscription.remove();
+  }, [settings.autoSkip, skipTimes.data, duration, seriesTitle, episodeNumber, skipped, player]);
+  useEffect(() => {
     if (!playing || !visible || trackMenu) return;
     const timer = setTimeout(() => setVisible(false), 3000);
     return () => clearTimeout(timer);
   }, [playing, visible, trackMenu]);
   useEffect(() => {
-    if (!upNext || (!playing && !previewNext)) return;
+    if (!upNext || (!playing && !previewNext && !ended)) return;
     const timer = setInterval(() => setCountdown(value => Math.max(0, value - 1)), 1000);
     return () => clearInterval(timer);
-  }, [upNext, playing, previewNext]);
+  }, [upNext, playing, previewNext, ended]);
   useEffect(() => {
     if (countdown === 0 && upNext) onNext?.();
   }, [countdown, upNext, onNext]);
@@ -169,13 +196,14 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
     </View>
     {buffering && <ActivityIndicator pointerEvents="none" color={colors.text} style={StyleSheet.absoluteFill} />}
     {!!ripple && <View pointerEvents="none" style={{ position: 'absolute', top: '38%', left: ripple < 0 ? '12%' : '70%', backgroundColor: '#FFFFFF33', borderRadius: 48, padding: 18 }}><Text tabular>{ripple > 0 ? '+10' : '−10'}</Text></View>}
-    {(skipInterval || fallbackSkip) && <Press accessibilityRole="button" accessibilityLabel={skipLabel}
+    {!!skipNotice && <View pointerEvents="none" accessibilityLiveRegion="polite" style={{ position: 'absolute', right: 16, bottom: 132, padding: 12, backgroundColor: 'rgba(11,13,18,0.85)', borderRadius: 8 }}><Text style={{ color: '#FFFFFF' }}>{skipNotice}</Text></View>}
+    {skipInterval && <Press accessibilityRole="button" accessibilityLabel={skipLabel}
       onPress={() => {
-        const target = Math.min(duration, skipInterval?.end ?? player.currentTime + 85);
+        const target = Math.min(duration, skipInterval.end);
         seekTo(player, target);
         setPosition(target);
       }} style={({ pressed }) => ({ position: 'absolute', right: 16, bottom: upNext ? 156 : 80, minHeight: 48, justifyContent: 'center', opacity: pressed ? 0.7 : 1, zIndex: 2 })}>
-      <View style={{ height: skipInterval ? 40 : 32, borderRadius: 20, paddingHorizontal: 18, justifyContent: 'center', backgroundColor: 'rgba(11,13,18,0.85)' }}>
+      <View style={{ height: 40, borderRadius: 20, paddingHorizontal: 18, justifyContent: 'center', backgroundColor: 'rgba(11,13,18,0.85)' }}>
         <Text style={{ color: '#FFFFFF', fontSize: 14 }}>{skipLabel}</Text>
       </View>
     </Press>}
