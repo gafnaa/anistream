@@ -1,6 +1,7 @@
 name: Release
 
-# Push a tag like v0.1.0 to build a signed Android APK on EAS
+# Push a tag like v0.1.0 to build a signed Android APK (EAS local build on this
+# runner with the EAS-managed keystore; it does not use EAS build quota)
 # and publish it as a GitHub Release.
 on:
   push:
@@ -33,6 +34,10 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
       - run: npm ci
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
 
       - name: Tag must match app.json version
         run: |
@@ -47,14 +52,8 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Build on EAS
-        id: build
-        run: |
-          eas build --platform android --profile production --non-interactive --wait --json > build.json
-          echo "url=$(node -p "require('./build.json')[0].artifacts.buildUrl")" >> "$GITHUB_OUTPUT"
-
-      - name: Download APK
-        run: curl -fsSL -o "anistream-$GITHUB_REF_NAME.apk" "${{ steps.build.outputs.url }}"
+      - name: Build APK
+        run: eas build --local --platform android --profile production --non-interactive --output "anistream-$GITHUB_REF_NAME.apk"
 
       - uses: softprops/action-gh-release@v3
         with:
