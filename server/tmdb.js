@@ -100,7 +100,7 @@ export function resolveTm(slug, alternate = false) {
         try {
           const url = new URL(source.url);
           if (url.protocol !== 'https:' || !TM_VIDEO_HOST.test(url.hostname)) continue;
-          const master = await (await request(url)).text();
+          const master = dropDecoyVariants(await (await request(url)).text());
           if (!master.startsWith('#EXTM3U') || !(await firstSegmentLoads(url, master))) continue;
           return { type: 'hls', url: url.href, master, server };
         } catch (error) { lastError = error; }
@@ -115,6 +115,14 @@ function childUrl(uri, base) {
   const url = new URL(uri, base);
   if (base.search && !url.search && url.host === base.host) url.search = base.search;
   return url;
+}
+// Orion masters list a top-bandwidth "tiles.m3u8" variant that is a decoy clip, not the film.
+export function dropDecoyVariants(master) {
+  const lines = master.split('\n');
+  return lines.filter((line, index) => {
+    const uri = line.startsWith('#EXT-X-STREAM-INF') ? lines[index + 1] : line;
+    return !/(^|\/)tiles[^/?]*\.m3u8/i.test(uri?.trim() ?? '');
+  }).join('\n');
 }
 const playlistUris = text => text.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'));
 async function firstSegmentLoads(masterUrl, master) {
