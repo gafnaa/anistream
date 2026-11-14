@@ -439,9 +439,14 @@ app.get('/api/hls', wrap(async (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=60');
 
   if (isManifest) {
-    const text = await upstream.text();
-    res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-    return res.send(rewriteManifest(text, url.toString(), keySuffix(req)));
+    // Some CDNs put ".m3u8" inside segment URLs, so trust the body, not the URL.
+    const body = Buffer.from(await upstream.arrayBuffer());
+    if (body.subarray(0, 16).toString('utf8').replace(/^\uFEFF/, '').startsWith('#EXTM3U')) {
+      res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+      return res.send(rewriteManifest(body.toString('utf8'), url.toString(), keySuffix(req)));
+    }
+    res.setHeader('Content-Type', 'video/mp2t');
+    return res.send(body);
   }
 
   // Binary segment / key / init segment: stream it straight through.
