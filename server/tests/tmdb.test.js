@@ -58,8 +58,27 @@ test('stream resolve retries once excluding failed server and always requests h2
     }
     return new Response('#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nvideo.m3u8');
   };
-  try { assert.equal((await resolveTm('tm~movie~1~1')).type, 'hls'); assert.equal(calls.length, 3); }
+  try { assert.equal((await resolveTm('tm~movie~1~1')).type, 'hls'); assert.equal(calls.length, 5); }
   finally { globalThis.fetch = original; }
+});
+test('stream resolve skips servers whose segments are forbidden', async () => {
+  const original = globalThis.fetch, excludes = [];
+  globalThis.fetch = async url => {
+    const parsed = new URL(url);
+    if (parsed.hostname === 'vidbolt.xyz') {
+      excludes.push(parsed.searchParams.get('exclude'));
+      const server = parsed.searchParams.has('exclude') ? 'vega' : 'quantum';
+      return Response.json({stream:{server,sources:[{url:`https://proxy.vidbolt.xyz/${server}/master.m3u8`}]}});
+    }
+    if (parsed.pathname.endsWith('master.m3u8')) return new Response('#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nvideo.m3u8');
+    if (parsed.pathname.endsWith('video.m3u8')) return new Response('#EXTM3U\n#EXTINF:5,\nhttps://vercetti.org/seg/1');
+    return new Response('x', { status: parsed.pathname.includes('quantum') || parsed.hostname === 'vercetti.org' && excludes.length === 1 ? 403 : 200 });
+  };
+  try {
+    const stream = await resolveTm('tm~movie~7~1');
+    assert.equal(stream.server, 'vega');
+    assert.deepEqual(excludes, [null, 'quantum']);
+  } finally { globalThis.fetch = original; }
 });
 test('TV subtitle lookup is episode scoped and paginates to Indonesian SRT', async () => {
   const original = globalThis.fetch, calls = [];

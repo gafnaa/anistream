@@ -375,7 +375,10 @@ app.get('/api/tm/:slug.m3u8', wrap(async (req, res) => {
   const slug = req.params.slug;
   const stream = await resolveTm(slug, req.query.alternate === '1');
   const subtitle = await getTmSubtitle(slug).catch(() => null);
-  let master = rewriteManifest(stream.master, stream.url, keySuffix(req));
+  // A media playlist has nowhere to declare subtitles, so wrap it in a one-variant master.
+  const source = !subtitle || stream.master.includes('#EXT-X-STREAM-INF') ? stream.master
+    : `#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=3000000\n${stream.url}\n`;
+  let master = rewriteManifest(source, stream.url, keySuffix(req));
   if (subtitle) master = injectTmSubtitle(master, `/api/sub/${encodeURIComponent(slug)}.m3u8?${keySuffix(req).slice(1)}`);
   res.type('application/vnd.apple.mpegurl').send(master);
 }));

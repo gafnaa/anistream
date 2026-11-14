@@ -1,7 +1,7 @@
 const API = 'https://api.themoviedb.org/3';
 const SUB_API = 'https://api.thesubtitledb.org';
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36';
-export const TM_VIDEO_HOST = /(^|\.)(rousav\.tech|hakunabolt\.workers\.dev|hakunaymatata\.com|proxy\.vidbolt\.xyz|vercetti\.org)$/i;
+export const TM_VIDEO_HOST = /(^|\.)(rousav\.tech|hakunabolt\.workers\.dev|hakunaymatata\.com|vidbolt\.xyz|vercetti\.org)$/i;
 let cached = (_key, _ttl, fn) => fn();
 export function configureTmCache(helper) { cached = helper; }
 export function parseTmSlug(slug, episode = false) {
@@ -84,23 +84,46 @@ export async function getTmEpisode(slug) {
 export function resolveTm(slug, alternate = false) {
   const { type, id, season, episode } = parseTmSlug(slug, true);
   return cached(`tm-stream:${slug}:${alternate}`, 20 * 60_000, async () => {
-    let previous = alternate ? (await resolveTm(slug)).server : '';
-    for (let attempt = 0; attempt < (alternate ? 1 : 2); attempt++) {
+    // Some Vidbolt servers hand out playlists whose segments are 403 for us,
+    // so a server only counts once its first segment actually loads.
+    const excluded = alternate ? [(await resolveTm(slug)).server] : [];
+    let lastError = new Error('No playable Vidbolt source');
+    for (let attempt = 0; attempt < 4; attempt++) {
+      let data;
       try {
-        const params = new URLSearchParams({ type, id, hevc: '0', ...(type === 'tv' ? { season: String(season), episode: String(episode) } : {}), ...(previous ? { exclude: previous } : {}) });
-        const data = await (await request(`https://vidbolt.xyz/api/resolve?${params}`, { Referer: 'https://vidbolt.xyz/' })).json();
-        previous = data.stream?.server || previous;
-        for (const source of data.stream?.sources || []) {
+        const params = new URLSearchParams({ type, id, hevc: '0', ...(type === 'tv' ? { season: String(season), episode: String(episode) } : {}), ...(excluded.length ? { exclude: excluded.join(',') } : {}) });
+        data = await (await request(`https://vidbolt.xyz/api/resolve?${params}`, { Referer: 'https://vidbolt.xyz/' })).json();
+      } catch (error) { lastError = error; continue; }
+      const server = data.stream?.server;
+      if (!server) break;
+      for (const source of data.stream.sources || []) {
+        try {
           const url = new URL(source.url);
           if (url.protocol !== 'https:' || !TM_VIDEO_HOST.test(url.hostname)) continue;
           const master = await (await request(url)).text();
-          if (!master.startsWith('#EXTM3U')) continue;
-          return { type: 'hls', url: url.href, master, server: previous };
-        }
-      } catch (error) { if (attempt === 1) throw error; }
+          if (!master.startsWith('#EXTM3U') || !(await firstSegmentLoads(url, master))) continue;
+          return { type: 'hls', url: url.href, master, server };
+        } catch (error) { lastError = error; }
+      }
+      excluded.push(server);
     }
-    throw new Error('No playable Vidbolt source');
+    throw lastError;
   });
+}
+const playlistUris = text => text.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'));
+async function firstSegmentLoads(masterUrl, master) {
+  let playlistUrl = masterUrl, playlist = master;
+  if (master.includes('#EXT-X-STREAM-INF')) {
+    const variant = playlistUris(master)[0];
+    if (!variant) return false;
+    playlistUrl = new URL(variant, masterUrl);
+    playlist = await (await request(playlistUrl)).text();
+  }
+  const segment = playlistUris(playlist)[0];
+  if (!segment) return false;
+  const response = await fetch(new URL(segment, playlistUrl), { headers: { 'User-Agent': UA, Range: 'bytes=0-1023' }, signal: AbortSignal.timeout(15000) });
+  await response.body?.cancel().catch(() => {});
+  return response.ok;
 }
 export function srtToVtt(text) {
   const body = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').replace(/^WEBVTT[^\n]*\n/, '').replace(/^X-TIMESTAMP-MAP=.*\n/m, '')
