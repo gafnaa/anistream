@@ -25,10 +25,12 @@ function time(value: number) {
   const seconds = Math.max(0, Math.floor(value));
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
-export function NativePlayer({ url, type, resume, onSave, onError, onNext, children, previewNext = false, seriesTitle, episodeNumber, fullscreen = false, onToggleFullscreen }: {
+export function NativePlayer({ url, type, resume, onSave, onError, onNext, children, previewNext = false, seriesTitle, episodeNumber, anime = true, fullscreen = false, onToggleFullscreen }: {
   url: string; type: 'hls' | 'mp4'; resume: number; onSave: (position: number, duration: number) => void;
   onError: () => void; onNext?: () => void; children: React.ReactNode; previewNext?: boolean;
-  seriesTitle?: string | null; episodeNumber?: number; fullscreen?: boolean; onToggleFullscreen?: () => void;
+  seriesTitle?: string | null;
+  /** Anime episodes get AniSkip times and the +85 s opening skip; films and TV do not. */
+  anime?: boolean; episodeNumber?: number; fullscreen?: boolean; onToggleFullscreen?: () => void;
 }) {
   const [initialResume] = useState(resume);
   const scrubberWidth = useRef(1);
@@ -45,9 +47,9 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
   const [buffering, setBuffering] = useState(true);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
-  const skipTimes = useSkipTimes(seriesTitle, episodeNumber, duration);
+  const skipTimes = useSkipTimes(anime ? seriesTitle : undefined, episodeNumber, duration);
   const skipInterval = skipTimes.data?.intervals.find(interval => position >= interval.start && position < interval.end);
-  const fallbackSkip = duration > 0 && position < 300 && !skipTimes.isFetching && !skipTimes.data?.intervals.length;
+  const fallbackSkip = anime && duration > 0 && position < 300 && !skipTimes.isFetching && !skipTimes.data?.intervals.length;
   const skipLabel = skipInterval ? t(skipInterval.type === 'op' ? 'skipIntro' : skipInterval.type === 'ed' ? 'skipEnding' : 'skipRecap') : t('skipForward85');
   const [visible, setVisible] = useState(true);
   const [ripple, setRipple] = useState(0);
