@@ -151,7 +151,7 @@ function OnlineWatchScreen({ slug, previewNext = false }: { slug: string; previe
         }}><Text>{t('retry')}</Text></Button><Button variant="secondary" onPress={goBack}><Text>{t('back')}</Text></Button></View>
       </View> : source && historyHydrated ? source.type === 'iframe' ? <><EmbedPlayer url={source.url} onError={fail} />{chrome}</> :
         <NativePlayer key={`${index}-${attempt}`} url={withApiKey(new URL(source.playUrl || source.url, `${API_URL}/`).href)} type={source.type}
-          resume={resume} onSave={save} onError={fail} seriesTitle={episode.data?.seriesTitle} episodeNumber={episodeNumber}
+          resume={resume} onSave={save} onError={fail} seriesTitle={episode.data?.seriesTitle} episodeNumber={episodeNumber} anime={!slug.startsWith('tm~')}
           onNext={settings.autoplayNext && episode.data?.nextSlug ? next : undefined} previewNext={previewNext}
           fullscreen={full} onToggleFullscreen={toggleFull}>{chrome}</NativePlayer>
         : <View style={styles.error}><ActivityIndicator color={colors.text} />{chrome}</View>}

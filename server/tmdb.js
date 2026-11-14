@@ -61,25 +61,34 @@ export async function searchTm(query, page = 1) {
   }));
   return { items: results.flatMap(result => result.items), page, query, hasNext: results.some(result => result.hasNext) };
 }
+// Untranslated Indonesian episode names come back as "Episode 3"; use the English names then.
+async function seasonWithNames(id, number) {
+  const season = await tm(`tv/${id}/season/${number}`, {}, true);
+  if (!season.episodes.some(ep => /^Episode \d+$/i.test(ep.name || ''))) return season;
+  const english = new Map((await tm(`tv/${id}/season/${number}`, { language: 'en-US' }, true)).episodes.map(ep => [ep.episode_number, ep.name]));
+  return { ...season, episodes: season.episodes.map(ep => /^Episode \d+$/i.test(ep.name || '') && english.get(ep.episode_number)
+    ? { ...ep, name: english.get(ep.episode_number) } : ep) };
+}
 export function getTmSeries(slug) {
   const { type, id } = parseTmSlug(slug);
   return cached(`tm-series:${slug}`, 6 * 3600_000, async () => {
     const data = await tm(`${type}/${id}`, {}, true);
     const english = !data.overview || untranslated(data) ? await tm(`${type}/${id}`, { language: 'en-US' }, true) : null;
+    const title = (untranslated(data) && (english?.title || english?.name)) || data.title || data.name;
     let episodes;
-    if (type === 'movie') episodes = [{ slug: `${slug}~1`, number: '1', title: data.title, date: data.release_date || '', url: '', thumbnail: image(data.backdrop_path, 'w300') }];
+    if (type === 'movie') episodes = [{ slug: `${slug}~1`, number: '1', title, date: data.release_date || '', url: '', thumbnail: image(data.backdrop_path, 'w300') }];
     else {
       const seasons = data.seasons.filter(season => season.season_number > 0 && season.air_date && season.air_date <= new Date().toISOString().slice(0, 10));
       const pages = [];
       // Bound concurrent season requests for long-running shows.
-      for (let start = 0; start < seasons.length; start += 4) pages.push(...await Promise.all(seasons.slice(start, start + 4).map(season => tm(`tv/${id}/season/${season.season_number}`, {}, true))));
+      for (let start = 0; start < seasons.length; start += 4) pages.push(...await Promise.all(seasons.slice(start, start + 4).map(season => seasonWithNames(id, season.season_number))));
       episodes = pages.flatMap(season => season.episodes.filter(ep => ep.air_date && ep.air_date <= new Date().toISOString().slice(0, 10)).map(ep => ({
         slug: `${slug}~${season.season_number}~${ep.episode_number}`, number: '', title: `S${season.season_number} E${ep.episode_number} · ${ep.name}`,
         date: ep.air_date, url: '', thumbnail: image(ep.still_path, 'w300'), duration: (ep.runtime || 0) * 60,
       })));
       episodes.forEach((episode, index) => { episode.number = String(index + 1); });
     }
-    return { slug, title: (untranslated(data) && (english?.title || english?.name)) || data.title || data.name, image: image(data.poster_path), banner: image(data.backdrop_path, 'w1280'),
+    return { slug, title, image: image(data.poster_path), banner: image(data.backdrop_path, 'w1280'),
       synopsis: data.overview || english?.overview || null, genres: data.genres.map(genre => genre.name), genreLinks: [],
       rating: String(data.vote_average), year: (data.release_date || data.first_air_date || '').slice(0, 4),
       released: data.release_date || data.first_air_date || null, status: data.status, type: type === 'movie' ? 'Film' : 'Series',
