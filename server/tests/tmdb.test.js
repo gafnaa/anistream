@@ -117,3 +117,19 @@ test('decoy tiles variant is removed from orion masters', async () => {
   const master = '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080\ntiles.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=2000000,RESOLUTION=1280x720\nvideo_720p.m3u8';
   assert.equal(dropDecoyVariants(master), '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=2000000,RESOLUTION=1280x720\nvideo_720p.m3u8');
 });
+test('untranslated Japanese titles fall back to English in lists', async () => {
+  const original = globalThis.fetch, token = process.env.TMDB_TOKEN;
+  process.env.TMDB_TOKEN = 't';
+  globalThis.fetch = async url => {
+    const english = new URL(url).searchParams.get('language') === 'en-US';
+    return Response.json({ total_pages: 1, results: [
+      { id: 1, title: english ? 'Chainsaw Man – The Movie: Reze Arc' : '劇場版 チェンソーマン レゼ篇', original_title: '劇場版 チェンソーマン レゼ篇', original_language: 'ja' },
+      { id: 2, title: english ? 'The Rings of Power' : 'Cincin Kekuasaan', original_title: 'The Rings of Power', original_language: 'en' },
+    ] });
+  };
+  try {
+    const { listTm } = await import('../tmdb.js');
+    const { items } = await listTm({ type: 'movie', list: 'popular', page: 77 });
+    assert.deepEqual(items.map(item => item.title), ['Chainsaw Man – The Movie: Reze Arc', 'Cincin Kekuasaan']);
+  } finally { globalThis.fetch = original; if (token === undefined) delete process.env.TMDB_TOKEN; else process.env.TMDB_TOKEN = token; }
+});

@@ -23,17 +23,29 @@ function tm(path, params = {}, detail = false) {
     return (await request(`${API}/${path}?${query}`, { Authorization: `Bearer ${process.env.TMDB_TOKEN}` })).json();
   });
 }
+// TMDB returns the original title when no Indonesian translation exists, which for
+// Japanese or Korean titles is unreadable for most users; prefer the English title then.
+const untranslated = data => !['id', 'en'].includes(data.original_language)
+  && (data.title || data.name) === (data.original_title || data.original_name);
 const image = (path, size = 'w500') => path ? `https://image.tmdb.org/t/p/${size}${path}` : null;
 const card = (entry, type) => ({ slug: `tm~${type}~${entry.id}`, title: entry.title || entry.name,
   image: image(entry.poster_path), type: type === 'movie' ? 'Film' : 'Series', status: null,
   episode: null, episodeTitle: null, kind: 'series', url: `https://www.themoviedb.org/${type}/${entry.id}` });
+async function englishTitles(route, params, results) {
+  if (!results.some(untranslated)) return results;
+  const english = new Map((await tm(route, { ...params, language: 'en-US' })).results.map(entry => [entry.id, entry]));
+  return results.map(entry => untranslated(entry) && english.has(entry.id)
+    ? { ...entry, title: english.get(entry.id).title, name: english.get(entry.id).name } : entry);
+}
 export async function listTm({ type = 'movie', list = 'trending', genre = '', page = 1 } = {}) {
   if (!['movie', 'tv'].includes(type) || !['trending', 'popular', 'top', 'now', 'genre'].includes(list)) throw new Error('Invalid movie filters');
   if (genre && !/^\d+$/.test(String(genre))) throw new Error('Invalid genre');
   const route = list === 'trending' ? `trending/${type}/week` : list === 'genre' ? `discover/${type}`
     : `${type}/${list === 'top' ? 'top_rated' : list === 'now' ? type === 'movie' ? 'now_playing' : 'on_the_air' : 'popular'}`;
-  const data = await tm(route, { page: String(page), ...(genre ? { with_genres: String(genre) } : {}) });
-  return { items: data.results.map(entry => card(entry, type)), page, hasNext: page < data.total_pages };
+  const params = { page: String(page), ...(genre ? { with_genres: String(genre) } : {}) };
+  const data = await tm(route, params);
+  const results = await englishTitles(route, params, data.results);
+  return { items: results.map(entry => card(entry, type)), page, hasNext: page < data.total_pages };
 }
 export async function genresTm(type = 'movie') {
   if (!['movie', 'tv'].includes(type)) throw new Error('Invalid media type');
@@ -42,8 +54,10 @@ export async function genresTm(type = 'movie') {
 export async function searchTm(query, page = 1) {
   if (!query) return { items: [], page, hasNext: false };
   const results = await Promise.all(['movie', 'tv'].map(async type => {
-    const data = await tm(`search/${type}`, { query, page: String(page), include_adult: 'false' });
-    return { items: data.results.map(entry => card(entry, type)), hasNext: page < data.total_pages };
+    const params = { query, page: String(page), include_adult: 'false' };
+    const data = await tm(`search/${type}`, params);
+    const entries = await englishTitles(`search/${type}`, params, data.results);
+    return { items: entries.map(entry => card(entry, type)), hasNext: page < data.total_pages };
   }));
   return { items: results.flatMap(result => result.items), page, query, hasNext: results.some(result => result.hasNext) };
 }
@@ -51,7 +65,7 @@ export function getTmSeries(slug) {
   const { type, id } = parseTmSlug(slug);
   return cached(`tm-series:${slug}`, 6 * 3600_000, async () => {
     const data = await tm(`${type}/${id}`, {}, true);
-    const english = !data.overview ? await tm(`${type}/${id}`, { language: 'en-US' }, true) : null;
+    const english = !data.overview || untranslated(data) ? await tm(`${type}/${id}`, { language: 'en-US' }, true) : null;
     let episodes;
     if (type === 'movie') episodes = [{ slug: `${slug}~1`, number: '1', title: data.title, date: data.release_date || '', url: '', thumbnail: image(data.backdrop_path, 'w300') }];
     else {
@@ -65,7 +79,7 @@ export function getTmSeries(slug) {
       })));
       episodes.forEach((episode, index) => { episode.number = String(index + 1); });
     }
-    return { slug, title: data.title || data.name, image: image(data.poster_path), banner: image(data.backdrop_path, 'w1280'),
+    return { slug, title: (untranslated(data) && (english?.title || english?.name)) || data.title || data.name, image: image(data.poster_path), banner: image(data.backdrop_path, 'w1280'),
       synopsis: data.overview || english?.overview || null, genres: data.genres.map(genre => genre.name), genreLinks: [],
       rating: String(data.vote_average), year: (data.release_date || data.first_air_date || '').slice(0, 4),
       released: data.release_date || data.first_air_date || null, status: data.status, type: type === 'movie' ? 'Film' : 'Series',
