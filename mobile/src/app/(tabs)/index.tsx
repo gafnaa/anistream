@@ -76,6 +76,8 @@ export default function Home() {
         onEndReached={() => { if (latest.hasNextPage && !latest.isFetchingNextPage) void latest.fetchNextPage(); }} />}
       {!homeFailed && <Row title={t('completed')} items={completed.data?.pages.flatMap(page => page.items) ?? []} loading={completed.isPending}
         error={completed.isError} retry={() => void completed.refetch()} itemKey={item => item.slug} renderItem={item => <PosterCard item={item} />} />}
+      {home.data?.movieRows?.map(row => <Row key={row.title} title={row.title} items={row.items}
+        retry={() => void home.refetch()} itemKey={item => item.slug} renderItem={item => <PosterCard item={item} />} />)}
     </Animated.ScrollView>
     <View style={{ position: 'absolute', top: 0, left: 0, right: 0, paddingTop: insets.top }}>
       <Animated.View pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: colors.surface,

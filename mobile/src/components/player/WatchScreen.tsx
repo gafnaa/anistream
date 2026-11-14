@@ -42,7 +42,7 @@ function OnlineWatchScreen({ slug, previewNext = false }: { slug: string; previe
   const history = useHistory();
   const historyHydrated = useHistoryHydrated();
   const saved = history.find(item => item.episodeSlug === slug);
-  const episodeNumber = Number(series.data?.episodes.find(item => item.slug === slug)?.number ?? slug.match(/episode-(\d+(?:\.\d+)?)/)?.[1] ?? episode.data?.title.match(/episode\s+(\d+(?:\.\d+)?)/i)?.[1]) || undefined;
+  const episodeNumber = slug.startsWith('tm~') ? undefined : Number(series.data?.episodes.find(item => item.slug === slug)?.number ?? slug.match(/episode-(\d+(?:\.\d+)?)/)?.[1] ?? episode.data?.title.match(/episode\s+(\d+(?:\.\d+)?)/i)?.[1]) || undefined;
   const [position, setPosition] = useState<number | null>(null);
   const resume = position ?? (settings.resume && saved && saved.duration - saved.position > 30 ? saved.position : 0);
   const failedAttempt = useRef('');

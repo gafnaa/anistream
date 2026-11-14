@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Press } from '@/components/Press';
-import { ActivityIndicator, AppState, Pressable, StyleSheet, View } from 'react-native';
-import { useVideoPlayer, VideoView, type VideoPlayer } from 'expo-video';
+import { ActivityIndicator, AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useVideoPlayer, VideoView, type VideoPlayer, type SubtitleTrack, type AudioTrack } from 'expo-video';
 import { useFocusEffect } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
 import { Text } from '@/components/Text';
@@ -12,6 +12,7 @@ import { PlayerButton } from './PlayerButton';
 import { useSkipTimes } from '@/api';
 
 const AUTOPLAY_NEXT = true;
+const trackKey = (track: SubtitleTrack | AudioTrack) => track.id ?? `${track.language}:${track.label}:${track.name ?? ''}`;
 // expo-video exposes seeking through a mutable native player property.
 function seekTo(player: VideoPlayer, position: number) {
   player.currentTime = Math.max(0, Math.min(player.duration, position));
@@ -35,6 +36,12 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
     value.timeUpdateEventInterval = 0.5;
   });
   const [playing, setPlaying] = useState(false);
+  const [subtitleTracks, setSubtitleTracks] = useState<SubtitleTrack[]>([]);
+  const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([]);
+  const [selectedSubtitle, setSelectedSubtitle] = useState<string | null>(null);
+  const [selectedAudio, setSelectedAudio] = useState<string | null>(null);
+  const [trackMenu, setTrackMenu] = useState(false);
+  const subtitleChosen = useRef(false);
   const [buffering, setBuffering] = useState(true);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -70,7 +77,19 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
     const subscriptions = [
       player.addListener('sourceLoad', event => {
         initialize(event.duration);
+        setAudioTracks(event.availableAudioTracks);
+        setSubtitleTracks(event.availableSubtitleTracks);
+        const indonesia = event.availableSubtitleTracks.find(track => /^(id|ind)$/i.test(track.language));
+        if (indonesia && !subtitleChosen.current) { player.subtitleTrack = indonesia; setSelectedSubtitle(trackKey(indonesia)); }
       }),
+      player.addListener('availableSubtitleTracksChange', event => {
+        setSubtitleTracks(event.availableSubtitleTracks);
+        const indonesia = event.availableSubtitleTracks.find(track => /^(id|ind)$/i.test(track.language));
+        if (indonesia && !subtitleChosen.current) { player.subtitleTrack = indonesia; setSelectedSubtitle(trackKey(indonesia)); }
+      }),
+      player.addListener('availableAudioTracksChange', event => setAudioTracks(event.availableAudioTracks)),
+      player.addListener('subtitleTrackChange', event => setSelectedSubtitle(event.subtitleTrack ? trackKey(event.subtitleTrack) : null)),
+      player.addListener('audioTrackChange', event => setSelectedAudio(event.audioTrack ? trackKey(event.audioTrack) : null)),
       player.addListener('statusChange', event => {
         setBuffering(event.status === 'loading');
         if (event.status === 'error') onError();
@@ -110,10 +129,10 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
     };
   }, [player, initialResume, onError]);
   useEffect(() => {
-    if (!playing || !visible) return;
+    if (!playing || !visible || trackMenu) return;
     const timer = setTimeout(() => setVisible(false), 3000);
     return () => clearTimeout(timer);
-  }, [playing, visible]);
+  }, [playing, visible, trackMenu]);
   useEffect(() => {
     if (!upNext || (!playing && !previewNext)) return;
     const timer = setInterval(() => setCountdown(value => Math.max(0, value - 1)), 1000);
@@ -170,6 +189,7 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text variant="caption" tabular style={{ color: '#FFFFFF' }}>{time(position)} / {time(duration)}</Text>
+          {(subtitleTracks.length > 0 || audioTracks.length > 1) && <Button variant="secondary" onPress={() => setTrackMenu(value => !value)} accessibilityState={{ expanded: trackMenu }}><Text variant="caption">{t('subtitles')} / {t('audioTracks')}</Text></Button>}
           {onToggleFullscreen && <PlayerButton icon={fullscreen ? 'contract' : 'maximize'} label={t(fullscreen ? 'exitFullscreen' : 'fullscreen')} onPress={onToggleFullscreen} />}
         </View>
         <Pressable accessibilityRole="adjustable" accessibilityLabel={t('seek')}
@@ -197,6 +217,19 @@ export function NativePlayer({ url, type, resume, onSave, onError, onNext, child
         </Pressable>
       </View>
     </View>}
+    {visible && trackMenu && <ScrollView style={{ position: 'absolute', bottom: 90, left: 16, right: 16, maxHeight: '55%', backgroundColor: colors.surface, borderRadius: 10 }} contentContainerStyle={{ padding: 12, gap: 8 }}>
+      <Text variant="caption">{t('subtitles')}</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {[null, ...subtitleTracks].map(track => <Button key={track ? trackKey(track) : 'off'} variant={selectedSubtitle === (track ? trackKey(track) : null) ? 'secondary' : 'outline'}
+          accessibilityState={{ selected: selectedSubtitle === (track ? trackKey(track) : null) }} onPress={() => { subtitleChosen.current = true; player.subtitleTrack = track; setSelectedSubtitle(track ? trackKey(track) : null); }}>
+          <Text variant="caption">{track ? /^(id|ind)$/i.test(track.language) ? 'Indonesia' : /^(en|eng)$/i.test(track.language) ? 'English' : track.label || track.language : t('subtitlesOff')}</Text>
+        </Button>)}
+      </View>
+      {audioTracks.length > 1 && <><Text variant="caption">{t('audioTracks')}</Text><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {audioTracks.map(track => <Button key={trackKey(track)} variant={selectedAudio === trackKey(track) ? 'secondary' : 'outline'} accessibilityState={{ selected: selectedAudio === trackKey(track) }}
+          onPress={() => { player.audioTrack = track; setSelectedAudio(trackKey(track)); }}><Text variant="caption">{track.label || track.language}</Text></Button>)}
+      </View></>}
+    </ScrollView>}
     {upNext && <View style={{ position: 'absolute', right: 16, bottom: 76, padding: 12, borderRadius: 10, backgroundColor: colors.surface, flexDirection: 'row', gap: 12, alignItems: 'center' }}>
       <View style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 3, borderColor: colors.brand, borderTopColor: countdown < 8 ? colors.line : colors.brand, borderRightColor: countdown < 5 ? colors.line : colors.brand, borderBottomColor: countdown < 3 ? colors.line : colors.brand, alignItems: 'center', justifyContent: 'center' }}><Text tabular>{countdown}</Text></View>
       <Text variant="title">{t('upNext')}</Text><Button variant="secondary" onPress={() => setCancelled(true)}><Text>{t('cancel')}</Text></Button>

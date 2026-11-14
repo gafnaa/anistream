@@ -1,3 +1,4 @@
+import { configureTmCache, listTm, genresTm, searchTm, getTmSeries, getTmEpisode, resolveTm, getTmSubtitle, injectTmSubtitle, TM_VIDEO_HOST } from './tmdb.js';
 import { parseUpdateSlugs, seriesUpdates, validSeriesSlug } from './updates.js';
 import { MN_VIDEO_HOST } from './mirainime.js';
 import { validAccessKey } from './access.js';
@@ -104,6 +105,8 @@ function cached(key, ttl, fn) {
   });
 }
 
+configureTmCache(cached);
+
 const wrap = (fn) => (req, res) => {
   Promise.resolve(fn(req, res)).catch((err) => {
     console.error('[api]', req.path, err.message);
@@ -144,8 +147,23 @@ app.get('/api/home', wrap(async (req, res) => {
     const home = await getHome();
     await enrichCovers([...home.latest, ...home.ongoing, ...home.trending]);
     warmThumbs(home.latest.filter(item => item.kind === 'episode').map(item => item.slug), LOCAL_API);
-    return home;
+    const rows = await Promise.allSettled([
+      listTm({ type: 'movie' }), listTm({ type: 'tv' }), listTm({ list: 'popular' }),
+    ]);
+    return { ...home, movieRows: rows.map((row, index) => ({
+      title: ['Film Trending', 'Series Trending', 'Film Populer'][index],
+      items: row.status === 'fulfilled' ? row.value.items : [],
+    })) };
   }));
+}));
+
+app.get('/api/movies', wrap(async (req, res) => {
+  const { type = 'movie', list = 'trending', genre = '' } = req.query;
+  const page = Math.max(1, Math.min(500, Math.floor(Number(req.query.page) || 1)));
+  res.json(await listTm({ type, list, genre, page }));
+}));
+app.get('/api/movies/genres', wrap(async (req, res) => {
+  res.json(await genresTm(req.query.type || 'movie'));
 }));
 
 app.get('/api/latest', wrap(async (req, res) => {
@@ -179,7 +197,12 @@ app.get('/api/browse', wrap(async (req, res) => {
 app.get('/api/search', wrap(async (req, res) => {
   const q = String(req.query.q || '').trim();
   const page = Math.max(1, Number(req.query.page) || 1);
-  res.json(await cached(`search:${q}:${page}`, TTL.list, () => withCovers(search(q, page))));
+  res.json(await cached(`search:${q}:${page}`, TTL.list, async () => {
+    const results = await Promise.allSettled([withCovers(search(q, page)), searchTm(q, page)]);
+    if (results.every(result => result.status === 'rejected')) throw new Error('Search unavailable');
+    const pages = results.filter(result => result.status === 'fulfilled').map(result => result.value);
+    return { query: q, page, items: pages.flatMap(result => result.items), hasNext: pages.some(result => result.hasNext) };
+  }));
 }));
 
 /**
@@ -206,6 +229,7 @@ app.get('/api/thumb/:slug', wrap(async (req, res) => {
 }));
 
 function cachedSeries(slug) {
+  if (slug.startsWith('tm~')) return getTmSeries(slug);
   return cached(`series:${slug}`, TTL.series, async () => {
     const series = await getSeries(slug);
     await enrichCovers([series]);
@@ -226,6 +250,7 @@ app.get('/api/series/:slug', wrap(async (req, res) => {
 }));
 
 app.get('/api/episode/:slug', wrap(async (req, res) => {
+  if (req.params.slug.startsWith('tm~')) return res.json(await getTmEpisode(req.params.slug));
   res.json(await cached(`episode:${req.params.slug}`, req.params.slug.startsWith('mn~') ? 15_000 : TTL.episode, () => getEpisode(req.params.slug)));
 }));
 
@@ -235,6 +260,13 @@ app.get('/api/episode/:slug', wrap(async (req, res) => {
  */
 app.get('/api/resolve', wrap(async (req, res) => {
   const mirror = String(req.query.mirror || '');
+  const tmMirror = (() => { try { return new URL(mirror); } catch { return null; } })();
+  if (tmMirror?.origin === 'https://vidbolt.xyz' && tmMirror.pathname === '/api/resolve') {
+    const slug = tmMirror.searchParams.get('slug');
+    const alternate = tmMirror.searchParams.get('alternate') === '1';
+    const stream = await resolveTm(slug, alternate);
+    return res.json({ type: 'hls', url: stream.url, playUrl: `/api/tm/${encodeURIComponent(slug)}.m3u8?alternate=${alternate ? '1' : '0'}${keySuffix(req)}` });
+  }
   let host;
   try {
     host = new URL(mirror).hostname;
@@ -274,7 +306,7 @@ const HOST_RE = /(^|\.)(xtwap\.top|blogger\.com|googlevideo\.com|googleuserconte
 function assertAllowed(target) {
   const u = new URL(target);
   if (u.protocol !== 'https:' && u.protocol !== 'http:') throw new Error('Bad protocol');
-  if (!HOST_RE.test(u.hostname)) throw new Error(`Host not allowed: ${u.hostname}`);
+  if (!HOST_RE.test(u.hostname) && !TM_VIDEO_HOST.test(u.hostname)) throw new Error(`Host not allowed: ${u.hostname}`);
   return u;
 }
 
@@ -337,6 +369,31 @@ app.get('/api/video', wrap(async (req, res) => {
   } catch {
     // The player closed the connection (seek or stop); nothing to report.
   }
+}));
+
+app.get('/api/tm/:slug.m3u8', wrap(async (req, res) => {
+  const slug = req.params.slug;
+  const stream = await resolveTm(slug, req.query.alternate === '1');
+  const subtitle = await getTmSubtitle(slug).catch(() => null);
+  // A media playlist has nowhere to declare subtitles, so wrap it in a one-variant master.
+  const source = !subtitle || stream.master.includes('#EXT-X-STREAM-INF') ? stream.master
+    : `#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=3000000\n${stream.url}\n`;
+  let master = rewriteManifest(source, stream.url, keySuffix(req));
+  if (subtitle) master = injectTmSubtitle(master, `/api/sub/${encodeURIComponent(slug)}.m3u8?${keySuffix(req).slice(1)}`);
+  res.type('application/vnd.apple.mpegurl').send(master);
+}));
+app.get('/api/sub/:slug.m3u8', wrap(async (req, res) => {
+  const sub = await getTmSubtitle(req.params.slug);
+  if (!sub) return res.status(404).end();
+  const series = await getTmSeries(req.params.slug.split('~').slice(0, 3).join('~'));
+  const episode = series.episodes.find(ep => ep.slug === req.params.slug);
+  const duration = Math.max(sub.duration, episode?.duration || series.duration || 0);
+  res.type('application/vnd.apple.mpegurl').send(`#EXTM3U\n#EXT-X-TARGETDURATION:${duration}\n#EXT-X-VERSION:3\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXTINF:${duration},\n/api/sub/${encodeURIComponent(req.params.slug)}.vtt?${keySuffix(req).slice(1)}\n#EXT-X-ENDLIST\n`);
+}));
+app.get('/api/sub/:slug.vtt', wrap(async (req, res) => {
+  const sub = await getTmSubtitle(req.params.slug);
+  if (!sub) return res.status(404).end();
+  res.type('text/vtt').send(sub.vtt);
 }));
 
 app.get('/api/hls', wrap(async (req, res) => {

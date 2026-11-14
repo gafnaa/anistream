@@ -10,11 +10,12 @@ export type CatalogueCard = {
 };
 export type HomeResponse = {
   latest: CatalogueCard[]; ongoing: CatalogueCard[]; trending: TrendingCard[];
+  movieRows?: { title: string; items: CatalogueCard[] }[];
 };
 export type PageResponse = { items: CatalogueCard[]; page: number; hasNext: boolean };
 export type SearchResponse = PageResponse & { query: string };
 export type Genre = { slug: string; name: string; count?: number };
-export type SeriesEpisode = { slug: string; number: string | null; title: string; date: string; url: string };
+export type SeriesEpisode = { slug: string; number: string | null; title: string; date: string; url: string; thumbnail?: string | null };
 export type SeriesResponse = {
   slug: string; title: string; image: string | null; banner: string | null; synopsis: string | null;
   genres: string[]; genreLinks?: Genre[]; trailerId: string | null; status: string | null; studio: string | null;

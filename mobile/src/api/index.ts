@@ -9,6 +9,15 @@ export function createQueryClient() {
 export function useHome() {
   return useQuery({ queryKey: ['home'], queryFn: ({ signal }) => apiGet<HomeResponse>('/api/home', {}, signal) });
 }
+export function useMovies(params: { type: 'movie' | 'tv'; list: string; genre?: string }) {
+  return useInfiniteQuery({ queryKey: ['movies', params], initialPageParam: 1,
+    queryFn: ({ pageParam, signal }) => apiGet<PageResponse>('/api/movies', { ...params, page: pageParam }, signal),
+    getNextPageParam: last => last.hasNext ? last.page + 1 : undefined });
+}
+export function useMovieGenres(type: 'movie' | 'tv') {
+  return useQuery({ queryKey: ['movie-genres', type], staleTime: 3600_000,
+    queryFn: ({ signal }) => apiGet<Genre[]>('/api/movies/genres', { type }, signal) });
+}
 export function useAppLatest(enabled = false) {
   return useQuery({ queryKey: ['app-latest'], enabled, retry: false, staleTime: 600_000,
     queryFn: ({ signal }) => apiGet<import('./types').AppRelease>('/api/app/latest', {}, signal) });
